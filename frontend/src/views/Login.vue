@@ -3,8 +3,8 @@
     <div class="page-center">
       <div class="card page-card waves-auth-card waves-well">
         <div class="card-header waves-auth-header">
-          <h2 class="card-title waves-text-corporate">用户登录</h2>
-          <p class="waves-text-light">登录您的企业账户</p>
+          <h2 class="card-title waves-text-corporate">User Login</h2>
+          <p class="waves-text-light">Sign in to your account</p>
         </div>
         <div class="card-body waves-auth-body">
           <div v-if="error" class="alert alert-error waves-alert-error">
@@ -20,14 +20,14 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 4H4C2.9 4 2.01 4.9 2.01 6L2 18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z" fill="currentColor"/>
                 </svg>
-                邮箱地址
+                Email Address
               </label>
               <input
                 type="email"
                 id="email"
                 v-model="form.email"
                 class="form-control waves-form-control"
-                placeholder="请输入您的邮箱地址"
+                placeholder="Enter your email address"
                 required
                 :disabled="isLoading"
               />
@@ -38,14 +38,14 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M18 8H17V6C17 3.24 14.76 1 12 1S7 3.24 7 6V8H6C4.9 8 4 8.9 4 10V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V10C20 8.9 19.1 8 18 8ZM12 17C10.9 17 10 16.1 10 15S10.9 13 12 13 14 13.9 14 15 13.1 17 12 17ZM15.1 8H8.9V6C8.9 4.29 10.29 2.9 12 2.9S15.1 4.29 15.1 6V8Z" fill="currentColor"/>
                 </svg>
-                密码
+                Password
               </label>
               <input
                 type="password"
                 id="password"
                 v-model="form.password"
                 class="form-control waves-form-control"
-                placeholder="请输入您的密码"
+                placeholder="Enter your password"
                 required
                 :disabled="isLoading"
               />
@@ -58,19 +58,19 @@
                 :disabled="isLoading"
               >
                 <span v-if="isLoading" class="waves-loading-spinner"></span>
-                {{ isLoading ? '登录中...' : '立即登录' }}
+                {{ isLoading ? 'Signing in...' : 'Sign In' }}
               </button>
             </div>
           </form>
           
           <div class="waves-auth-footer">
             <div class="waves-divider">
-              <span class="waves-divider-text">或</span>
+              <span class="waves-divider-text">or</span>
             </div>
             <p class="waves-text-light">
-              还没有账户？
+              Don't have an account?
               <router-link to="/register" class="waves-link">
-                立即注册
+                Sign Up
               </router-link>
             </p>
           </div>
@@ -204,8 +204,15 @@ export default {
   font-size: 0.95rem;
 }
 
+.waves-corporate-bg {
+  --auth-primary: rgb(58, 126, 185);
+  --auth-primary-hover: rgb(45, 102, 150);
+  --auth-shadow: 0 2px 4px rgba(58, 126, 185, 0.3);
+  --auth-shadow-hover: 0 4px 8px rgba(58, 126, 185, 0.4);
+}
+
 .waves-form-label svg {
-  color: var(--waves-primary-500);
+  color: var(--auth-primary);
 }
 
 .waves-form-control {
@@ -226,8 +233,8 @@ export default {
 
 .waves-form-control:focus {
   outline: none;
-  border-color: #0078d4;
-  box-shadow: 0 2px 4px rgba(0, 120, 212, 0.3);
+  border-color: var(--auth-primary);
+  box-shadow: var(--auth-shadow);
   background: #ffffff;
 }
 
@@ -248,20 +255,20 @@ export default {
   justify-content: center;
   gap: 12px;
   padding: 8px 32px;
-  background: #0078d4;
+  background: var(--auth-primary) !important;
   color: white;
-  border: none;
+  border: none !important;
   border-radius: 4px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 120, 212, 0.3);
+  box-shadow: var(--auth-shadow);
 }
 
 .waves-btn-primary:hover:not(:disabled) {
-  background: #106ebe;
-  box-shadow: 0 4px 8px rgba(0, 120, 212, 0.4);
+  background: var(--auth-primary-hover) !important;
+  box-shadow: var(--auth-shadow-hover);
 }
 
 .waves-btn-primary:active:not(:disabled) {
@@ -324,14 +331,14 @@ export default {
 }
 
 .waves-link {
-  color: var(--waves-primary-500);
+  color: var(--auth-primary) !important;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.2s ease;
 }
 
 .waves-link:hover {
-  color: var(--waves-primary-600);
+  color: var(--auth-primary-hover) !important;
   text-decoration: underline;
 }
 

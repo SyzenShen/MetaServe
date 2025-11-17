@@ -11,7 +11,7 @@
             </svg>
           </div>
           <div class="waves-header-text">
-            <h3 class="waves-dialog-title">新建文件夹</h3>
+            <h3 class="waves-dialog-title">Create Folder</h3>
           </div>
         </div>
         <button @click="$emit('close')" class="waves-close-btn">
@@ -27,7 +27,7 @@
           
           <div class="waves-form-group">
             <label class="waves-form-label">
-              <span class="waves-label-text">文件夹名称</span>
+              <span class="waves-label-text">Folder Name</span>
             </label>
             <div class="waves-input-container">
               <input
@@ -35,7 +35,7 @@
                 type="text"
                 class="waves-form-control"
                 :class="{ 'waves-has-error': hasError }"
-                placeholder="请输入文件夹名称"
+                placeholder="Enter folder name"
                 @keyup.enter="createFolder"
                 @input="validateInput"
                 ref="nameInput"
@@ -58,7 +58,7 @@
               <svg class="waves-success-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span class="waves-success-text">文件夹名称有效</span>
+              <span class="waves-success-text">Valid folder name</span>
             </div>
           </div>
           
@@ -69,14 +69,14 @@
       <!-- 对话框底部 -->
       <div class="waves-dialog-footer">
         <button @click="$emit('close')" class="waves-btn waves-btn-secondary">
-          取消
+          Cancel
         </button>
         <button 
           @click="createFolder" 
           class="waves-btn waves-btn-primary" 
           :disabled="!folderName.trim() || creating || hasError"
         >
-          {{ creating ? '创建中...' : '创建文件夹' }}
+          {{ creating ? 'Creating...' : 'Create Folder' }}
         </button>
       </div>
     </div>
@@ -120,14 +120,14 @@ export default {
       const invalidChars = /[<>:"/\\|?*]/
       if (invalidChars.test(name)) {
         hasError.value = true
-        errorMessage.value = '文件夹名称不能包含以下字符: < > : " / \\ | ? *'
+        errorMessage.value = 'Folder name cannot contain: < > : " / \\ | ? *'
         return
       }
       
       // 检查文件夹名称长度
       if (name.length > 255) {
         hasError.value = true
-        errorMessage.value = '文件夹名称不能超过255个字符'
+        errorMessage.value = 'Folder name cannot exceed 255 characters'
         return
       }
       
@@ -135,7 +135,7 @@ export default {
       const reservedNames = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9']
       if (reservedNames.includes(name.toUpperCase())) {
         hasError.value = true
-        errorMessage.value = '不能使用系统保留名称'
+        errorMessage.value = 'Cannot use system reserved names'
         return
       }
       
@@ -168,8 +168,8 @@ export default {
           throw new Error(result.error)
         }
       } catch (error) {
-        console.error('创建文件夹失败:', error)
-        alert('创建文件夹失败: ' + error.message)
+        console.error('Failed to create folder:', error)
+        alert('Failed to create folder: ' + error.message)
       } finally {
         creating.value = false
       }
@@ -204,6 +204,9 @@ export default {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  --dialog-primary: rgb(58, 126, 185);
+  --dialog-primary-hover: rgb(45, 102, 150);
+  --dialog-primary-ring: rgba(58, 126, 185, 0.16);
 }
 
 .waves-dialog-container {
@@ -262,7 +265,7 @@ export default {
 .waves-header-icon {
   width: 40px;
   height: 40px;
-  background: var(--waves-primary-500);
+  background: var(--dialog-primary);
   border-radius: var(--waves-radius-md);
   display: flex;
   align-items: center;
@@ -395,8 +398,8 @@ export default {
 
 .waves-form-control:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--dialog-primary);
+  box-shadow: 0 0 0 3px var(--dialog-primary-ring);
   background: #ffffff;
 }
 
@@ -488,12 +491,12 @@ export default {
 
 
 .waves-btn-primary {
-  background: #3b82f6;
+  background: var(--dialog-primary);
   color: white;
 }
 
 .waves-btn-primary:hover:not(:disabled) {
-  background: #2563eb;
+  background: var(--dialog-primary-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
@@ -514,7 +517,7 @@ export default {
 
 .waves-btn-secondary:hover {
   background: #f9fafb;
-  border-color: #3b82f6;
+  border-color: var(--dialog-primary);
   transform: translateY(-2px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
@@ -537,7 +540,7 @@ export default {
 }
 
 .waves-dialog-body::-webkit-scrollbar-thumb:hover {
-  background: var(--waves-primary-400);
+  background: rgba(58, 126, 185, 0.6);
 }
 
 /* 响应式设计 */

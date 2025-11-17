@@ -33,6 +33,11 @@ class CustomUserManager(BaseUserManager):
 class CustomUser(AbstractUser):
     """自定义用户模型，使用邮箱作为用户名"""
     email = models.EmailField(unique=True, verbose_name='邮箱地址')
+    # 每个用户的存储限额（字节）。默认 50 GB
+    storage_quota = models.BigIntegerField(
+        default=50 * 1024 * 1024 * 1024,
+        verbose_name='存储限额（字节）'
+    )
     
     # 使用自定义用户管理器
     objects = CustomUserManager()

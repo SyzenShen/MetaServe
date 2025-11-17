@@ -3,8 +3,8 @@
     <div class="page-center">
       <div class="card page-card waves-auth-card waves-well">
         <div class="card-header waves-auth-header">
-          <h2 class="card-title waves-text-corporate">用户注册</h2>
-          <p class="waves-text-light">创建您的企业账户</p>
+          <h2 class="card-title waves-text-corporate">User Registration</h2>
+          <p class="waves-text-light">Create your account</p>
         </div>
         <div class="card-body waves-auth-body">
           <div v-if="error" class="alert alert-error waves-alert-error">
@@ -27,14 +27,14 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 4H4C2.9 4 2.01 4.9 2.01 6L2 18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z" fill="currentColor"/>
                 </svg>
-                邮箱地址
+                Email Address
               </label>
               <input
                 type="email"
                 id="email"
                 v-model="form.email"
                 class="form-control waves-form-control"
-                placeholder="请输入您的邮箱地址"
+                placeholder="Enter your email address"
                 required
                 :disabled="isLoading"
               />
@@ -45,7 +45,7 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M18 8H17V6C17 3.24 14.76 1 12 1S7 3.24 7 6V8H6C4.9 8 4 8.9 4 10V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V10C20 8.9 19.1 8 18 8ZM12 17C10.9 17 10 16.1 10 15S10.9 13 12 13 14 13.9 14 15 13.1 17 12 17ZM15.1 8H8.9V6C8.9 4.29 10.29 2.9 12 2.9S15.1 4.29 15.1 6V8Z" fill="currentColor"/>
                 </svg>
-                密码
+                Password
               </label>
               <input
                 type="password"
@@ -53,7 +53,7 @@
                 v-model="form.password"
                 class="form-control waves-form-control"
                 :class="{ 'waves-form-error': form.password && !isPasswordValid }"
-                placeholder="请输入密码"
+                placeholder="Enter a password"
                 required
                 :disabled="isLoading"
                 minlength="8"
@@ -64,24 +64,24 @@
               <div class="password-requirements" v-if="form.password">
                 <div class="requirement-item" :class="{ 'valid': passwordChecks.length }">
                   <span class="check-icon">{{ passwordChecks.length ? '✓' : '✗' }}</span>
-                  至少8个字符
+                  At least 8 characters
                 </div>
                 <div class="requirement-item" :class="{ 'valid': passwordChecks.uppercase }">
                   <span class="check-icon">{{ passwordChecks.uppercase ? '✓' : '✗' }}</span>
-                  包含大写字母 (A-Z)
+                  Includes uppercase letters (A-Z)
                 </div>
                 <div class="requirement-item" :class="{ 'valid': passwordChecks.lowercase }">
                   <span class="check-icon">{{ passwordChecks.lowercase ? '✓' : '✗' }}</span>
-                  包含小写字母 (a-z)
+                  Includes lowercase letters (a-z)
                 </div>
                 <div class="requirement-item" :class="{ 'valid': passwordChecks.number }">
                   <span class="check-icon">{{ passwordChecks.number ? '✓' : '✗' }}</span>
-                  包含数字 (0-9)
+                  Includes numbers (0-9)
                 </div>
               </div>
               
               <small v-if="!form.password" class="waves-form-hint">
-                密码必须包含至少8个字符，包括大写字母、小写字母和数字
+                Password must be at least 8 characters and include uppercase, lowercase and numbers
               </small>
             </div>
             
@@ -90,7 +90,7 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z" fill="currentColor"/>
                 </svg>
-                确认密码
+                Confirm Password
               </label>
               <input
                 type="password"
@@ -98,13 +98,13 @@
                 v-model="form.confirmPassword"
                 class="form-control waves-form-control"
                 :class="{ 'waves-form-error': form.password && form.confirmPassword && form.password !== form.confirmPassword }"
-                placeholder="请再次输入密码"
+                placeholder="Re-enter your password"
                 required
                 :disabled="isLoading"
               />
               <small v-if="form.password && form.confirmPassword && form.password !== form.confirmPassword" 
                      class="waves-form-error-text">
-                密码不匹配
+                Passwords do not match
               </small>
             </div>
             
@@ -115,19 +115,19 @@
                 :disabled="isLoading || form.password !== form.confirmPassword || !isPasswordValid"
               >
                 <span v-if="isLoading" class="waves-loading-spinner"></span>
-                {{ isLoading ? '注册中...' : '立即注册' }}
+                {{ isLoading ? 'Registering...' : 'Sign Up' }}
               </button>
             </div>
           </form>
           
           <div class="waves-auth-footer">
             <div class="waves-divider">
-              <span class="waves-divider-text">或</span>
+              <span class="waves-divider-text">or</span>
             </div>
             <p class="waves-text-light">
-              已有账户？
+              Already have an account?
               <router-link to="/login" class="waves-link">
-                立即登录
+                Sign In
               </router-link>
             </p>
           </div>
@@ -326,8 +326,15 @@ export default {
   font-size: 0.95rem;
 }
 
+.waves-corporate-bg {
+  --auth-primary: rgb(58, 126, 185);
+  --auth-primary-hover: rgb(45, 102, 150);
+  --auth-shadow: 0 2px 4px rgba(58, 126, 185, 0.3);
+  --auth-shadow-hover: 0 4px 8px rgba(58, 126, 185, 0.4);
+}
+
 .waves-form-label svg {
-  color: var(--waves-primary-500);
+  color: var(--auth-primary);
 }
 
 .waves-form-control {
@@ -348,8 +355,8 @@ export default {
 
 .waves-form-control:focus {
   outline: none;
-  border-color: #0078d4;
-  box-shadow: 0 2px 4px rgba(0, 120, 212, 0.3);
+  border-color: var(--auth-primary);
+  box-shadow: var(--auth-shadow);
   background: #ffffff;
 }
 
@@ -397,20 +404,20 @@ export default {
   justify-content: center;
   gap: 12px;
   padding: 8px 32px;
-  background: #0078d4;
+  background: var(--auth-primary) !important;
   color: white;
-  border: none;
+  border: none !important;
   border-radius: 4px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 120, 212, 0.3);
+  box-shadow: var(--auth-shadow);
 }
 
 .waves-btn-primary:hover:not(:disabled) {
-  background: #106ebe;
-  box-shadow: 0 4px 8px rgba(0, 120, 212, 0.4);
+  background: var(--auth-primary-hover) !important;
+  box-shadow: var(--auth-shadow-hover);
 }
 
 .waves-btn-primary:active:not(:disabled) {
@@ -515,14 +522,14 @@ export default {
 }
 
 .waves-link {
-  color: var(--waves-primary-500);
+  color: var(--auth-primary) !important;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.2s ease;
 }
 
 .waves-link:hover {
-  color: var(--waves-primary-600);
+  color: var(--auth-primary-hover) !important;
   text-decoration: underline;
 }
 

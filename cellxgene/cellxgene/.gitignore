@@ -1,0 +1,59 @@
+# dependencies
+node_modules/
+
+# coverage
+coverage
+coverage.xml
+.coverage
+.nyc_output
+
+.pytest_cache/
+
+# production
+build/
+dist/
+*.egg-info
+
+# Environments
+venv*/
+cellxgene/
+
+# client build
+server/common/web/static/*
+server/common/web/templates/
+server/common/web/csp-hashes.json
+
+# eb build
+artifact.dir
+artifact.zip
+customize
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# cefpython
+error.log
+
+# misc
+.DS_Store
+npm-debug.log
+.vscode
+*.idea*
+__pycache__
+*.DS_Store*
+data
+tags
+myconfig.yaml
+
+# Jekyll
+docs/_site/
+docs/Gemfile.lock
+
+client/.eslintcache
+
+# E2E Testing
+ignoreE2E*
+
+# annotate subcmd
+.models_cache

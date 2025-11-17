@@ -1,6 +1,6 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication
@@ -8,6 +8,7 @@ from django.contrib.auth import login, logout
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from .serializers import UserRegistrationSerializer, UserLoginSerializer, UserSerializer
+from django.contrib.auth import get_user_model
 
 
 @csrf_exempt
@@ -80,3 +81,31 @@ def update_profile(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+@authentication_classes([TokenAuthentication])
+def set_user_quota(request, user_id):
+    """管理员更新指定用户的存储限额（字节）"""
+    User = get_user_model()
+    try:
+        target_user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    quota = request.data.get('storage_quota')
+    if quota is None:
+        return Response({'detail': 'storage_quota is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        quota_int = int(quota)
+        if quota_int <= 0:
+            return Response({'detail': 'storage_quota must be positive'}, status=status.HTTP_400_BAD_REQUEST)
+    except (ValueError, TypeError):
+        return Response({'detail': 'storage_quota must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
+
+    target_user.storage_quota = quota_int
+    target_user.save(update_fields=['storage_quota'])
+
+    return Response({'message': 'Quota updated', 'user': UserSerializer(target_user).data}, status=status.HTTP_200_OK)

@@ -1,18 +1,14 @@
 <template>
   <div class="folder-tree">
-    <div class="tree-header">
-      <h3>我的文件</h3>
-    </div>
-    
     <div class="tree-content">
       <!-- 根目录 -->
-      <div 
-        class="tree-node root-node"
-        :class="{ active: currentFolderId === null }"
-        @click="navigateToRoot"
-      >
-        <span class="node-label">全部文件</span>
-      </div>
+  <div 
+    class="tree-node root-node"
+    :class="{ active: currentFolderId === null }"
+    @click="navigateToRoot"
+  >
+    <span class="node-label">All Files</span>
+  </div>
       
       <!-- 文件夹树 -->
       <div class="folder-nodes">
@@ -138,22 +134,8 @@ onMounted(async () => {
   width: 250px;
   height: 100%;
   background: #ffffff;
-  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-}
-
-.tree-header {
-  padding: 12px 8px;
-  border-bottom: 1px solid #e5e5e5;
-  background: #ffffff;
-}
-
-.tree-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #323130;
 }
 
 .tree-content {
@@ -179,20 +161,40 @@ onMounted(async () => {
   color: #323130;
 }
 
-.tree-node.active {
-  background-color: #0078d4;
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 120, 212, 0.3);
-}
 
-.tree-node.active:hover {
-  background-color: #106ebe;
-}
-
+/* 根节点 All Files：未选中浅灰，选中白底蓝框 */
 .root-node {
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 400; /* 未选中不加粗 */
+  margin: 8px 8px 12px; /* 留出空间避免阴影被裁切 */
+  color: var(--text-muted); /* 未选中更浅的中性灰 */
+  background: transparent; /* 未选中保持与普通项一致（无底色） */
+  border: none; /* 无边框 */
+  border-radius: var(--waves-radius-sm);
+  padding: 6px 8px; /* 与普通项保持一致 */
 }
+.root-node:hover {
+  background: #f3f2f1; /* 与 .tree-node:hover 一致 */
+  color: #323130; /* 悬停为深灰 */
+}
+.root-node.active {
+  background: #ffffff; /* 选中白底 */
+  color: var(--text-primary); /* 选中文本改为中性主文本色，不再蓝色 */
+  border: none; /* 无边框 */
+  /* 自然的下投阴影，减少四周发光感，避免裁切不适 */
+  box-shadow:
+    0 2px 6px rgba(27, 44, 72, 0.14),
+    0 8px 20px rgba(27, 44, 72, 0.12);
+  font-weight: 600; /* 选中加粗 */
+}
+
+.root-node.active:hover {
+  background: #ffffff;
+  box-shadow:
+    0 4px 8px rgba(27, 44, 72, 0.16),
+    0 10px 24px rgba(27, 44, 72, 0.14);
+}
+
+/* 去除旧的仅文字颜色强调样式，改为按钮式风格 */
 
 .node-icon {
   margin-right: 8px;

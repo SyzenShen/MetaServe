@@ -1,0 +1,19 @@
+server:
+  app:
+    force_https: true
+    port: 5005
+
+dataset:
+  presentation:
+    max_categories: 1000
+    custom_colors: true
+
+  user_annotations:
+    enable: false
+    type: local_file_csv
+    local_file_csv:
+      directory: null
+      file: null
+
+  embeddings:
+    names: []

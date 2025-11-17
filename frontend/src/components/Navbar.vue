@@ -4,7 +4,7 @@
       <div class="navbar-header">
         <router-link to="/" class="navbar-brand">
           <img :src="logoUrl" alt="WAVES Logo" id="navbar-logo" />
-          <span class="brand-text">Download System</span>
+          <span class="brand-text">BioFileManager</span>
         </router-link>
       </div>
       
@@ -14,6 +14,25 @@
           <li :class="{ active: $route.path === '/' }">
             <router-link to="/">Home</router-link>
           </li>
+          
+          <template v-if="isAuthenticated">
+            <li :class="{ active: $route.path === '/files' }">
+              <router-link to="/files">Files</router-link>
+            </li>
+            <li :class="{ active: $route.path === '/download' }">
+              <router-link to="/download">Download</router-link>
+            </li>
+            <li :class="{ active: $route.path === '/search' }">
+              <router-link to="/search">Search Files</router-link>
+            </li>
+            <!-- 细胞可视化入口，使用 SPA 路由，优先跳转最近发布的文件 -->
+            <li :class="{ active: $route.path === '/cellxgene-app' }">
+              <router-link :to="cellxgeneRoute">Cell Visualization</router-link>
+            </li>
+            <li :class="{ active: $route.path === '/profile' }">
+              <router-link to="/profile">Profile</router-link>
+            </li>
+          </template>
 
           
           <!-- 用户相关项 -->
@@ -38,6 +57,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useFilesStore } from '../stores/files'
 import logoUrl from '../assets/images/logo.png'
 
 export default {
@@ -46,17 +66,27 @@ export default {
     const router = useRouter()
     const authStore = useAuthStore()
     
+    const filesStore = useFilesStore()
     const isAuthenticated = computed(() => authStore.isAuthenticated)
     const currentUser = computed(() => authStore.currentUser)
+    const cellxgeneRoute = computed(() => {
+      const lastFile = filesStore.lastPublishedCellxgeneFile
+      return lastFile
+        ? { path: '/cellxgene-app', query: { file: lastFile } }
+        : { path: '/cellxgene-app' }
+    })
     
     const handleLogout = async () => {
       await authStore.logout()
       router.push('/')
     }
+
+    // Use dedicated /download page instead of global NCBI dialog
     
     return {
       isAuthenticated,
       currentUser,
+      cellxgeneRoute,
       handleLogout,
       logoUrl
     }
@@ -68,14 +98,20 @@ export default {
 .navbar.waves-transparent {
   background: var(--waves-navbar-transparent-bg);
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 0 rgba(27, 44, 72, 0.08), 0 6px 12px rgba(0, 0, 0, 0.12);
   transition: all 0.3s ease;
-  min-height: 50px;
-  padding: 8px 0;
+  min-height: 72px; /* 与全局布局保持一致高度 */
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .navbar .container-fluid {
-  padding-left: 10px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .navbar-brand {
@@ -84,6 +120,7 @@ export default {
   color: var(--waves-corporate-text) !important;
   font-weight: 600;
   text-decoration: none;
+  height: 72px;
 }
 
 .navbar-brand:hover {
@@ -103,30 +140,30 @@ export default {
   font-weight: 600;
   color: #4a4a4a !important;
   text-shadow: none !important;
-  margin-top: -px;
 }
 
 .navbar-nav > li > a {
-  display: inline-block;
-  margin-top: 12px; /* 现在会明显下移 */
-  padding: 6px 13px !important;
+  display: flex;
+  align-items: center;
+  height: 72px;
+  padding: 0 14px !important;
   font-size: 14px;
 }
 
 
 .navbar-nav > li > a:hover,
 .navbar-nav > li > a:focus {
-  color: var(--waves-corporate-text-light) !important;
-  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: rgb(58, 126, 185) !important;
+  background-color: rgba(58, 126, 185, 0.08) !important;
   text-decoration: none;
 }
 
 .navbar-nav > li.active > a,
 .navbar-nav > li.active > a:hover,
 .navbar-nav > li.active > a:focus {
-  color: var(--brand-accent) !important;
-  background-color: rgba(37, 99, 235, 0.1) !important;
-  border-radius: var(--waves-radius-sm);
+  color: rgb(58, 126, 185) !important;
+  background-color: rgba(58, 126, 185, 0.14) !important;
+  border-radius: 0;
 }
 
 .navbar-text {

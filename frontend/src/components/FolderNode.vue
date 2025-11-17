@@ -112,23 +112,32 @@ const handleToggle = () => {
   transition: background-color 0.2s;
   user-select: none;
   min-height: 32px;
-  color: var(--text-secondary);
+  color: var(--text-muted); /* 未选中更浅灰 */
 }
 
 .folder-node:hover {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: #f3f2f1; /* 与 .root-node:hover 一致 */
+  color: #323130; /* 悬停为深灰，保持可点击反馈 */
 }
 
 .folder-node.active {
-  background-color: #0078d4;
-  color: white;
+  background-color: #ffffff; /* 选中白底 */
+  color: var(--text-primary); /* 选中为中性主文本色，不再蓝色 */
   border-radius: var(--waves-radius-sm);
-  box-shadow: 0 2px 4px rgba(0, 120, 212, 0.3);
+  margin: 8px 8px 12px; /* 与 All Files 一致，避免阴影裁切 */
+  /* 与 All Files 同步：自然下投阴影，避免四周发光和裁切感 */
+  box-shadow:
+    0 2px 6px rgba(27, 44, 72, 0.14),
+    0 8px 20px rgba(27, 44, 72, 0.12);
+  font-weight: 600; /* 选中加粗 */
 }
 
 .folder-node.active:hover {
-  background-color: #106ebe;
+  background-color: #ffffff;
+  /* 悬停轻微增强下投阴影，保持自然 */
+  box-shadow:
+    0 4px 8px rgba(27, 44, 72, 0.16),
+    0 10px 24px rgba(27, 44, 72, 0.14);
 }
 
 .expand-icon {
@@ -172,6 +181,6 @@ const handleToggle = () => {
 /* 活动状态下的图标颜色 */
 .folder-node.active .expand-icon,
 .folder-node.active .folder-icon {
-  color: white;
+  color: var(--text-primary); /* 图标颜色与文本一致，非蓝色 */
 }
 </style>

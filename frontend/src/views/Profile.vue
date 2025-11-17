@@ -9,28 +9,28 @@
             <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z"/>
           </svg>
         </div>
-        <h1 class="ms-title">个人资料</h1>
+        <h1 class="ms-title">Profile</h1>
       </div>
 
       <div v-if="currentUser" class="ms-profile-body">
         <!-- 基本信息 -->
         <div class="ms-section">
-          <h2 class="ms-section-title">基本信息</h2>
+          <h2 class="ms-section-title">Basic Information</h2>
           <div class="ms-info-list">
             <div class="ms-info-row">
-              <span class="ms-label">用户名</span>
+              <span class="ms-label">Username</span>
               <span class="ms-value">{{ currentUser.username }}</span>
             </div>
             <div class="ms-info-row">
-              <span class="ms-label">邮箱地址</span>
+              <span class="ms-label">Email Address</span>
               <span class="ms-value">{{ currentUser.email }}</span>
             </div>
             <div class="ms-info-row">
-              <span class="ms-label">注册时间</span>
+              <span class="ms-label">Registered At</span>
               <span class="ms-value">{{ formatDate(currentUser.date_joined) }}</span>
             </div>
             <div class="ms-info-row">
-              <span class="ms-label">最后登录</span>
+              <span class="ms-label">Last Login</span>
               <span class="ms-value">{{ formatDate(currentUser.last_login) }}</span>
             </div>
           </div>
@@ -38,15 +38,15 @@
 
         <!-- 统计信息 -->
         <div class="ms-section">
-          <h2 class="ms-section-title">账户统计</h2>
+          <h2 class="ms-section-title">Account Statistics</h2>
           <div class="ms-stats-grid">
             <div class="ms-stat-item">
               <div class="ms-stat-number">{{ fileCount }}</div>
-              <div class="ms-stat-label">上传文件数</div>
+              <div class="ms-stat-label">Uploaded Files</div>
             </div>
             <div class="ms-stat-item">
               <div class="ms-stat-number">{{ formatFileSize(totalFileSize) }}</div>
-              <div class="ms-stat-label">总文件大小</div>
+              <div class="ms-stat-label">Total File Size</div>
             </div>
           </div>
         </div>
@@ -55,7 +55,7 @@
       <!-- 加载状态 -->
       <div v-else class="ms-loading">
         <div class="ms-spinner"></div>
-        <p>加载用户信息中...</p>
+        <p>Loading user information...</p>
       </div>
     </div>
   </div>
@@ -82,8 +82,8 @@ export default {
     })
     
     const formatDate = (dateString) => {
-      if (!dateString) return '未知'
-      return new Date(dateString).toLocaleString('zh-CN')
+      if (!dateString) return 'Unknown'
+      return new Date(dateString).toLocaleString('en-US')
     }
     
     const formatFileSize = (bytes) => {
@@ -136,12 +136,14 @@ export default {
   display: flex;
   align-items: center;
   gap: 16px;
+  --profile-primary: rgb(58, 126, 185);
+  --profile-primary-hover: rgb(45, 102, 150);
 }
 
 .ms-avatar {
   width: 48px;
   height: 48px;
-  background: #0078d4;
+  background: var(--profile-primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -223,12 +225,13 @@ export default {
   border-radius: var(--waves-radius-sm);
   padding: 16px;
   text-align: center;
+  border-top: 2px solid var(--profile-primary);
 }
 
 .ms-stat-number {
   font-size: 28px;
   font-weight: 600;
-  color: #0078d4;
+  color: var(--profile-primary);
   margin-bottom: 4px;
   line-height: 1.2;
 }
@@ -251,7 +254,7 @@ export default {
   width: 20px;
   height: 20px;
   border: 2px solid #edebe9;
-  border-top: 2px solid #0078d4;
+  border-top: 2px solid var(--profile-primary);
   border-radius: 50%;
   animation: ms-spin 1s linear infinite;
   margin: 0 auto 16px;

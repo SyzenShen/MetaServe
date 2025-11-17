@@ -27,15 +27,15 @@
   --spacing-xl: 32px;
   --spacing-xxl: 48px;
   --card-max-width: 840px;
-  --border-color: #edebe9;
+  --border-color: #dbe2ed;
 
   /* ========================================
      WAVES企业级变量
      ======================================== */
   
   /* 企业级背景系统 */
-  --waves-corporate-bg: #ffffff;
-  --waves-corporate-gradient: #ffffff;
+  --waves-corporate-bg: #f5f7fb;
+  --waves-corporate-gradient: #f5f7fb;
   --waves-banner-image: url('./assets/images/banner.png');
   --waves-corporate-text-shadow: none;
   --waves-corporate-overlay: rgba(255, 255, 255, 0.8);
@@ -68,8 +68,8 @@
   
   /* 卡片系统 */
   --waves-card-bg: #ffffff;
-  --waves-card-secondary-bg: #f8f9fa;
-  --waves-card-hover-bg: #f1f3f4;
+  --waves-card-secondary-bg: #f3f3f3;
+  --waves-card-hover-bg: #ededed;
   
   /* 边框系统 */
   --waves-border-subtle: 1px solid #e5e7eb;
@@ -82,15 +82,18 @@
   --waves-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   
   /* 渐变系统 */
-  --waves-gradient-subtle: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
-  --waves-gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  --waves-gradient-subtle: linear-gradient(180deg, #ffffff 0%, #f3f3f3 100%);
+  --waves-gradient-primary: linear-gradient(135deg, #8d8d8d 0%, #6f6f6f 100%);
   
   /* 颜色系统 */
-  --waves-primary: #3b82f6;
-  --waves-primary-hover: #2563eb;
-  --waves-primary-bg: rgba(59, 130, 246, 0.1);
-  --waves-secondary: #6b7280;
-  --waves-secondary-hover: #4b5563;
+  --primary: #8d8d8d;
+  --primary-hover: #6f6f6f;
+  --primary-muted: rgba(141, 141, 141, 0.12);
+  --waves-primary: var(--primary);
+  --waves-primary-hover: var(--primary-hover);
+  --waves-primary-bg: var(--primary-muted);
+  --waves-secondary: #5b6474;
+  --waves-secondary-hover: #434b59;
   --waves-success: #10b981;
   --waves-success-hover: #059669;
   --waves-success-bg: rgba(16, 185, 129, 0.1);
@@ -100,8 +103,8 @@
   --waves-danger-hover: #dc2626;
   
   /* 文本颜色 */
-  --waves-text-primary: #111827;
-  --waves-text-light: #6b7280;
+  --waves-text-primary: #1b2c48;
+  --waves-text-light: #5b6474;
   
   /* 背景滤镜 */
   --waves-backdrop-filter: blur(10px);
@@ -114,8 +117,8 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #ffffff;
-  color: var(--text-primary);
+  background-color: #f5f7fb;
+  color: var(--waves-text-primary);
   line-height: 1.5;
   letter-spacing: 0.2px;
 }
@@ -125,6 +128,9 @@ body {
   margin: 0 auto;
   padding: 20px;
 }
+
+/* Remove outer padding when rendering corporate home inside container */
+/* removed special container override for corporate background to keep default centering */
 
 /* 居中页面与简洁卡片布局 */
 .page-center {
@@ -181,14 +187,14 @@ body {
 }
 
 .btn-primary {
-  background-color: #0078d4;
-  color: white;
-  border-color: #0078d4;
+  background-color: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
 }
 
 .btn-primary:hover {
-  background-color: #106ebe;
-  border-color: #106ebe;
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 .btn-secondary {
@@ -236,8 +242,8 @@ body {
 
 .form-control:focus {
   outline: none;
-  border-color: #0078d4;
-  box-shadow: 0 0 0 1px #0078d4;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 
 /* 卡片样式 */
@@ -307,11 +313,11 @@ a {
 }
 
 .nav-link:hover {
-  color: #0078d4;
+  color: var(--primary);
 }
 
 .nav-link.active {
-  color: #0078d4;
+  color: var(--primary);
   font-weight: 600;
 }
 
@@ -351,11 +357,11 @@ a {
 }
 
 .upload-area:hover {
-  border-color: #0078d4;
+  border-color: var(--primary);
 }
 
 .upload-area.dragover {
-  border-color: #0078d4;
+  border-color: var(--primary);
   background-color: #f3f9fd;
 }
 
@@ -395,8 +401,8 @@ a {
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #0078d4;
+  border: 3px solid rgba(31, 122, 203, 0.12);
+  border-top: 3px solid var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -429,9 +435,9 @@ a {
 }
 
 .alert-info {
-  color: #0078d4;
-  background-color: #f3f9fd;
-  border-color: #0078d4;
+  color: var(--primary);
+  background-color: var(--primary-muted);
+  border-color: var(--primary);
 }
 
 /* 徽章样式 */
@@ -479,7 +485,7 @@ a {
 
 .progress-bar {
   height: 100%;
-  background-color: #0078d4;
+  background-color: var(--primary);
   transition: width 0.3s ease;
 }
 
@@ -550,7 +556,7 @@ a {
 .stat-number {
   font-size: 32px;
   font-weight: 600;
-  color: #0078d4;
+  color: var(--primary);
   margin-bottom: 8px;
 }
 
@@ -577,20 +583,20 @@ a {
 /* 改进的焦点样式 */
 .btn:focus,
 .form-control:focus {
-  outline: 2px solid #0078d4;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
 /* 浅色主题与品牌色覆盖（追加在文件末尾以确保覆盖生效） */
 :root {
-  --bg-light: #ffffff; /* 纯白背景 */
-  --bg-secondary: #f8f9fa; /* 次要背景色 */
-  --text-dark: #212529; /* 深色正文 */
-  --text-secondary: #495057; /* 次要文字颜色 */
-  --text-muted: #6c757d; /* 弱化文字颜色 */
-  --brand-accent: #0d6efd; /* 现代蓝色 */
-  --brand-accent-hover: #0b5ed7;
-  --brand-accent-active: #0a58ca;
+  --bg-light: #f5f7fb;
+  --bg-secondary: #eef3fb;
+  --text-dark: #1b2c48;
+  --text-secondary: #4f5a6d;
+  --text-muted: #7a8599;
+  --brand-accent: #8d8d8d;
+  --brand-accent-hover: #6f6f6f;
+  --brand-accent-active: #5b5b5b;
   --danger: #dc3545; /* 标准危险色 */
   --success: #198754; /* 成功色 */
   --warning: #ffc107; /* 警告色 */
@@ -878,7 +884,7 @@ h3, .h3 {
 
 /* =================== 色彩方案变量覆盖（用户提供） =================== */
 :root {
-  --bg: #ffffff;            /* 整体背景 */
+  --bg: #f5f7fb;            /* 整体背景：与企业灰一致，消除两侧白边 */
   --panel-bg: #ffffff;      /* 卡片背景（纯白） */
   --muted-panel: #f8f9fa;   /* 卡片上浅分区 */
   --primary: #0d6efd;       /* 主色（蓝） */
@@ -892,7 +898,7 @@ h3, .h3 {
   --bg-primary: #ffffff;    /* 主要背景色 */
   --bg-secondary: #f8f9fa;  /* 次要背景色 */
   --bg-card: #ffffff;       /* 卡片背景色 */
-  --text-primary: #212529;  /* 主要文字颜色（深色） */
+  --text-primary: #1b2c48;  /* 主文本颜色 */
   --text-secondary: #495057; /* 次要文字颜色（深色） */
   --text-muted: #6c757d;    /* 弱化文字颜色（深色） */
   --border-color: #dee2e6;  /* 边框颜色 */
@@ -1208,14 +1214,9 @@ main.container,
 }
 
 .waves-corporate-bg::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--waves-corporate-overlay);
-  z-index: 0;
+  /* Disabled: remove any overlay/mask to prevent side obstruction of cards */
+  content: none !important;
+  display: none !important;
 }
 
 .waves-corporate-bg > * {
@@ -1236,10 +1237,12 @@ main.container,
 
 /* 企业级内容区域 */
 .waves-well {
-  background: var(--waves-corporate-well-bg);
+  /* Remove corporate well backdrop that can appear as side overlay */
+  background: transparent !important;
   border-radius: var(--radius-lg);
-  padding: 20px;
-  backdrop-filter: blur(10px);
+  padding: 0 !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
 }
 
 /* 联系页面样式 */

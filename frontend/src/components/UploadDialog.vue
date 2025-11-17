@@ -13,8 +13,8 @@
             </svg>
           </div>
           <div class="waves-header-text">
-            <h3 class="waves-dialog-title">文件上传</h3>
-            <p class="waves-dialog-subtitle">选择并上传您的文件到当前文件夹</p>
+            <h3 class="waves-dialog-title">Upload Files</h3>
+            <p class="waves-dialog-subtitle">Select and upload files to the current folder</p>
           </div>
         </div>
         <button @click="$emit('close')" class="waves-close-btn">
@@ -51,8 +51,8 @@
                 <path d="M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h4 class="waves-upload-title">拖拽文件到此处或点击选择</h4>
-            <p class="waves-upload-description">支持多个文件同时上传，单个文件最大 100GB</p>
+            <h4 class="waves-upload-title">Drag files here or click to select</h4>
+            <p class="waves-upload-description">Supports multiple files; each file up to 100GB</p>
             
 
           </div>
@@ -61,7 +61,7 @@
         <!-- 简约进度条 - 在文件列表上方 -->
         <div v-if="uploading" class="simple-upload-progress">
           <div class="progress-info">
-            <span class="progress-label">正在上传文件...</span>
+            <span class="progress-label">Uploading files...</span>
             <span class="progress-percentage">{{ uploadProgress }}%</span>
           </div>
           <div class="progress-bar">
@@ -76,13 +76,13 @@
               <svg class="waves-list-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              待上传文件 ({{ selectedFiles.length }})
+              Files to upload ({{ selectedFiles.length }})
             </h4>
             <button @click="clearAllFiles" class="waves-clear-btn">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M3 6H5H21M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              清空
+              Clear
             </button>
           </div>
           
@@ -117,7 +117,7 @@
           <svg class="waves-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          取消
+          Cancel
         </button>
         <button 
           @click="uploadFiles" 
@@ -134,7 +134,7 @@
               <path d="M12 2V6M12 18V22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M2 12H6M18 12H22M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          {{ uploading ? '上传中...' : '开始上传' }}
+          {{ uploading ? 'Uploading...' : 'Start Upload' }}
         </button>
       </div>
     </div>
@@ -264,27 +264,27 @@ export default {
     const getFileType = (filename) => {
       const ext = filename.split('.').pop().toLowerCase()
       const types = {
-        'pdf': 'PDF文档',
-        'doc': 'Word文档',
-        'docx': 'Word文档',
-        'xls': 'Excel表格',
-        'xlsx': 'Excel表格',
+        'pdf': 'PDF Document',
+        'doc': 'Word Document',
+        'docx': 'Word Document',
+        'xls': 'Excel Spreadsheet',
+        'xlsx': 'Excel Spreadsheet',
         'ppt': 'PowerPoint',
         'pptx': 'PowerPoint',
-        'txt': '文本文件',
-        'jpg': '图片',
-        'jpeg': '图片',
-        'png': '图片',
-        'gif': '图片',
-        'mp4': '视频',
-        'avi': '视频',
-        'mov': '视频',
-        'mp3': '音频',
-        'wav': '音频',
-        'zip': '压缩包',
-        'rar': '压缩包'
+        'txt': 'Text File',
+        'jpg': 'Image',
+        'jpeg': 'Image',
+        'png': 'Image',
+        'gif': 'Image',
+        'mp4': 'Video',
+        'avi': 'Video',
+        'mov': 'Video',
+        'mp3': 'Audio',
+        'wav': 'Audio',
+        'zip': 'Archive',
+        'rar': 'Archive'
       }
-      return types[ext] || '未知类型'
+      return types[ext] || (ext ? `${ext.toUpperCase()} File` : 'File')
     }
     
     return {

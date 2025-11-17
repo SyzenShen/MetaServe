@@ -116,33 +116,33 @@
         <div class="waves-settings-section">
           <h3 class="settings-title">
             <i class="fas fa-cog settings-icon"></i>
-            上传设置
+            Upload Settings
           </h3>
           <div class="settings-grid">
             <div class="setting-item">
-              <label class="setting-label">文件夹</label>
+              <label class="setting-label">Folder</label>
               <select v-model="uploadFolder" class="setting-input">
-                <option value="">根目录</option>
-                <option value="documents">文档</option>
-                <option value="images">图片</option>
-                <option value="videos">视频</option>
+                <option value="">Root</option>
+                <option value="documents">Documents</option>
+                <option value="images">Images</option>
+                <option value="videos">Videos</option>
               </select>
             </div>
             <div class="setting-item">
-              <label class="setting-label">压缩质量</label>
+              <label class="setting-label">Compression Quality</label>
               <select v-model="compressionLevel" class="setting-input">
-                <option value="none">无压缩</option>
-                <option value="low">低压缩</option>
-                <option value="medium">中等压缩</option>
-                <option value="high">高压缩</option>
+                <option value="none">No Compression</option>
+                <option value="low">Low Compression</option>
+                <option value="medium">Medium Compression</option>
+                <option value="high">High Compression</option>
               </select>
             </div>
             <div class="setting-item">
-              <label class="setting-label">上传完成后</label>
+              <label class="setting-label">After Upload</label>
               <select v-model="afterUpload" class="setting-input">
-                <option value="stay">停留在此页面</option>
-                <option value="redirect">跳转到文件列表</option>
-                <option value="download">自动下载</option>
+                <option value="stay">Stay on this page</option>
+                <option value="redirect">Go to File List</option>
+                <option value="download">Auto Download</option>
               </select>
             </div>
           </div>
@@ -237,7 +237,7 @@ export default {
     
     // 计算属性
     const acceptedFileTypes = computed(() => {
-      return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov'
+      return '.fastq,.fasta,.vcf,.bam,.sam,.bed,.gtf,.gff,.pdf,.doc,.docx,.ppt,.pptx,.rtf,.csv,.tsv,.xls,.xlsx,.json,.xml,.yaml,.sql,.py,.ipynb,.r,.rmd,.js,.html,.css,.java,.cpp,.c,.sh,.pl,.php,.rb,.go,.rs,.swift,.kt,.scala,.txt,.md,.log,.conf,.ini,.cfg,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.svg,.webp,.ico,.mp3,.wav,.flac,.aac,.ogg,.m4a,.mp4,.avi,.mov,.wmv,.flv,.mkv,.webm,.m4v,.zip,.rar,.7z,.tar,.gz,.bz2,.xz'
     })
     
     // 方法

@@ -6,16 +6,23 @@
         <router-view />
       </transition>
     </main>
+    <LoadingOverlay />
+    <!-- 全局 NCBI 下载弹窗 -->
+    <GlobalNcbiDialog />
   </div>
 </template>
 
 <script>
 import Navbar from './components/Navbar.vue'
+import LoadingOverlay from './components/LoadingOverlay.vue'
+import GlobalNcbiDialog from './components/GlobalNcbiDialog.vue'
 
 export default {
   name: 'App',
   components: {
-    Navbar
+    Navbar,
+    LoadingOverlay,
+    GlobalNcbiDialog
   }
 }
 </script>

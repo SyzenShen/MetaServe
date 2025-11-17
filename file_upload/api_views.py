@@ -1,17 +1,297 @@
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes, parser_classes, authentication_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
-from django.http import Http404, StreamingHttpResponse, FileResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
-from .models import File, Folder
-from .serializers import FileSerializer, FileUploadSerializer, FolderSerializer, FolderCreateSerializer
 import os
 import mimetypes
+import shutil
+import re
+import logging
+import signal
+import subprocess
+import textwrap
+import time
+import requests
+from pathlib import Path
+
+from rest_framework import status
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import api_view, permission_classes, parser_classes, authentication_classes
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.conf import settings
+from django.http import Http404, StreamingHttpResponse, FileResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from django.core.files import File as DjangoFile
+
+from .models import File, Folder
+from .serializers import FileSerializer, FileUploadSerializer, FolderSerializer, FolderCreateSerializer
+from .ncbi_client import (
+    NCBIDownloadError,
+    NCBIDownloadResult,
+    NCBIDownloadTooLarge,
+    download_ncbi_resource,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def _resolve_cellxgene_command():
+    """根据配置或 PATH 查找 cellxgene 可执行文件，并验证可执行性。
+
+    解析顺序：
+    1. 若 `CELLXGENE_CMD` 为绝对路径且存在且可执行，直接返回；
+    2. 尝试在 PATH 中解析 `CELLXGENE_CMD` 字符串；
+    3. 回退到在 PATH 中查找 `cellxgene`；
+    4. 若找不到，返回 None。
+
+    注意：仅返回可执行的文件路径，避免将不可执行的占位路径作为结果。
+    """
+    configured = getattr(settings, 'CELLXGENE_CMD', None)
+    candidates = []
+
+    def _is_executable(path: str) -> bool:
+        return os.path.isfile(path) and os.access(path, os.X_OK)
+
+    if configured:
+        # 绝对路径优先且必须可执行
+        if os.path.isabs(configured) and _is_executable(configured):
+            return configured
+        # 若是相对路径或不可执行，允许交给 PATH 解析
+        candidates.append(configured)
+
+    # 标准命令名
+    candidates.append('cellxgene')
+
+    for candidate in candidates:
+        resolved = shutil.which(candidate)
+        if resolved and _is_executable(resolved):
+            return resolved
+    return None
+
+
+def _is_pid_running(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def _stop_existing_cellxgene(pid_path: Path):
+    if not pid_path.exists():
+        return
+    try:
+        pid = int(pid_path.read_text().strip())
+    except (ValueError, OSError):
+        pid_path.unlink(missing_ok=True)
+        return
+
+    if not _is_pid_running(pid):
+        pid_path.unlink(missing_ok=True)
+        return
+
+    logger.info(f"Stopping existing Cellxgene process pid={pid}")
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pid_path.unlink(missing_ok=True)
+        return
+
+    for _ in range(20):
+        if not _is_pid_running(pid):
+            break
+        time.sleep(0.25)
+    else:
+        logger.warning("Cellxgene process did not terminate after SIGTERM, sending SIGKILL")
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+    pid_path.unlink(missing_ok=True)
+
+
+def prepare_h5ad_for_cellxgene(dataset_path: str):
+    """确保 .h5ad 文件包含 Cellxgene 需要的二维布局"""
+    # 优先使用配置的 Python 解释器；若不存在，尝试使用系统 python3/python
+    configured_python = getattr(
+        settings,
+        'CELLXGENE_PYTHON',
+        os.path.join(os.path.dirname(getattr(settings, 'CELLXGENE_CMD', 'cellxgene')), 'python'),
+    )
+    python_bin = None
+    if configured_python and os.path.exists(configured_python):
+        python_bin = configured_python
+    else:
+        python_bin = shutil.which('python3') or shutil.which('python')
+
+    if not python_bin:
+        return {
+            'status': 'skipped',
+            'message': '未找到 Python 解释器用于布局生成。请设置 CELLXGENE_PYTHON 或确保系统 PATH 中存在 python3/python'
+        }
+
+    script = textwrap.dedent(f"""
+        import sys
+        import numpy as np
+        from pathlib import Path
+        import anndata as ad
+        try:
+            from sklearn.decomposition import TruncatedSVD
+        except Exception as exc:
+            print(f"Failed to import TruncatedSVD: {{exc}}", file=sys.stderr)
+            raise
+
+        path = Path(r\"{dataset_path}\")
+        adata = ad.read_h5ad(path)
+        needs_layout = "X_umap" not in adata.obsm or adata.obsm["X_umap"].shape[1] < 2
+        if not needs_layout:
+            sys.exit(0)
+
+        matrix = adata.X
+        if hasattr(matrix, "tocsr"):
+            matrix = matrix.tocsr()
+        svd = TruncatedSVD(n_components=2, random_state=0)
+        coords = svd.fit_transform(matrix)
+        adata.obsm["X_umap"] = coords.astype("float32")
+        adata.uns["umap"] = {{"params": {{"method": "TruncatedSVD", "n_components": 2}}}}
+        adata.uns["default_embedding"] = "umap"
+        adata.write(path)
+    """)
+
+    env = os.environ.copy()
+    env.setdefault('PYTHONUNBUFFERED', '1')
+
+    try:
+        result = subprocess.run(
+            [python_bin, '-c', script],
+            capture_output=True,
+            text=True,
+            cwd=settings.BASE_DIR,
+            env=env,
+            check=False,
+        )
+    except OSError as exc:
+        logger.error("Failed to invoke Cellxgene python for layout generation: %s", exc)
+        return {'status': 'error', 'message': f'无法生成布局：{exc}'}
+
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        logger.error(
+            "Cellxgene layout script failed (code=%s): stdout=%s stderr=%s",
+            result.returncode,
+            result.stdout.strip(),
+            stderr,
+        )
+        # 友好提示缺少依赖
+        dep_hint = None
+        for mod, label in [('numpy', 'numpy'), ('anndata', 'anndata'), ('sklearn', 'scikit-learn'), ('h5py', 'h5py')]:
+            if f"No module named '{mod}'" in stderr or f"No module named \"{mod}\"" in stderr:
+                dep_hint = label
+                break
+        if dep_hint:
+            return {
+                'status': 'error',
+                'message': f"缺少依赖：{dep_hint}。请在 CELLXGENE_PYTHON 指定的 Python 环境安装：pip install numpy anndata scikit-learn h5py"
+            }
+        return {
+            'status': 'error',
+            'message': stderr or 'Cellxgene 布局生成失败'
+        }
+
+    if result.stdout:
+        logger.info("Cellxgene layout script output: %s", result.stdout.strip())
+    return {'status': 'prepared', 'message': '已生成默认二维布局'}
+
+
+def _kill_processes_on_port(port: int):
+    try:
+        result = subprocess.run(
+            ['lsof', '-t', f'-iTCP:{port}', '-sTCP:LISTEN'],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return
+
+    if result.returncode != 0 or not result.stdout:
+        return
+
+    for line in result.stdout.strip().splitlines():
+        try:
+            pid = int(line.strip())
+        except ValueError:
+            continue
+        if _is_pid_running(pid):
+            logger.warning("Killing process %s occupying port %s", pid, port)
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                continue
+            # give it a moment
+            for _ in range(10):
+                if not _is_pid_running(pid):
+                    break
+                time.sleep(0.1)
+            if _is_pid_running(pid):
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+
+def restart_cellxgene_process(dataset_path: str):
+    """尝试使用新的数据集重新启动 Cellxgene 服务"""
+    if not getattr(settings, 'CELLXGENE_AUTO_RESTART', True):
+        return {'status': 'skipped', 'message': 'Cellxgene 自动重启已关闭，请手动启动服务'}
+
+    command = _resolve_cellxgene_command()
+    python_bin = getattr(settings, 'CELLXGENE_PYTHON', None)
+    if not command and python_bin and os.path.exists(python_bin):
+        # 回退方案：使用 python -m cellxgene 启动
+        fallback = [python_bin, '-m', 'cellxgene']
+    else:
+        fallback = None
+    if not command and not fallback:
+        return {
+            'status': 'error',
+            'message': '未找到 cellxgene 命令。请安装 cellxgene 或设置环境变量 CELLXGENE_CMD 指向可执行文件，或设置 CELLXGENE_PYTHON 以使用 "python -m cellxgene" 启动。'
+        }
+
+    log_path = Path(getattr(settings, 'CELLXGENE_LOG_FILE', os.path.join(settings.BASE_DIR, 'logs', 'cellxgene.log')))
+    pid_path = Path(getattr(settings, 'CELLXGENE_PID_FILE', os.path.join(settings.BASE_DIR, '.pids', 'cellxgene.pid')))
+    host = getattr(settings, 'CELLXGENE_HOST', '0.0.0.0')
+    port = str(getattr(settings, 'CELLXGENE_PORT', 5005))
+
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    pid_path.parent.mkdir(parents=True, exist_ok=True)
+
+    _stop_existing_cellxgene(pid_path)
+    try:
+        _kill_processes_on_port(int(port))
+    except ValueError:
+        pass
+
+    env = os.environ.copy()
+    env.setdefault('PYTHONUNBUFFERED', '1')
+
+    try:
+        with open(log_path, 'a', buffering=1) as log_file:
+            args = [command, 'launch', dataset_path, '--host', host, '--port', port] if command else [*fallback, 'launch', dataset_path, '--host', host, '--port', port]
+            proc = subprocess.Popen(
+                args,
+                stdout=log_file,
+                stderr=log_file,
+                cwd=settings.BASE_DIR,
+                env=env,
+            )
+    except OSError as exc:
+        logger.error("Failed to start Cellxgene: %s", exc)
+        return {'status': 'error', 'message': f'无法启动 Cellxgene：{exc}'}
+
+    pid_path.write_text(str(proc.pid))
+    logger.info("Cellxgene restarted with dataset %s (pid=%s)", dataset_path, proc.pid)
+    return {'status': 'started', 'message': 'Cellxgene 已重新加载数据，请稍候页面刷新', 'pid': proc.pid}
 
 
 @api_view(['GET'])
@@ -53,11 +333,20 @@ def file_list(request):
 @parser_classes([MultiPartParser, FormParser])
 def file_upload(request):
     """文件上传"""
+    # 记录请求数据
+    logger.error(f"Upload request data: {dict(request.data)}")
+    logger.error(f"Upload request files: {dict(request.FILES)}")
+    logger.error(f"Upload request user: {request.user}")
+    
     serializer = FileUploadSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         file_obj = serializer.save()
         response_serializer = FileSerializer(file_obj, context={'request': request})
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+    
+    # 记录详细的验证错误
+    logger.error(f"Serializer validation errors: {serializer.errors}")
+    
     # 统一错误消息格式，便于前端展示
     errors = serializer.errors
     message = None
@@ -69,6 +358,87 @@ def file_upload(request):
     if not message:
         message = '文件上传失败'
     return Response({'message': message, 'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ncbi_import(request):
+    """从 NCBI 链接下载文件并保存到当前用户空间。"""
+    url = request.data.get('url')
+    parent_folder_id = request.data.get('parent_folder')
+    project = request.data.get('project') or 'NCBI Import'
+    access_level = request.data.get('access_level') or 'Internal'
+
+    if not url:
+        return Response({'message': '请提供 NCBI 链接'}, status=status.HTTP_400_BAD_REQUEST)
+
+    parent_folder = None
+    if parent_folder_id is not None:
+        try:
+            parent_folder = Folder.objects.get(id=parent_folder_id, user=request.user)
+        except Folder.DoesNotExist:
+            return Response({'message': '指定的文件夹不存在或无权限访问'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        download_result: NCBIDownloadResult = download_ncbi_resource(url)
+    except NCBIDownloadTooLarge as exc:
+        return Response({'message': str(exc)}, status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+    except NCBIDownloadError as exc:
+        return Response({'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    except requests.RequestException as exc:
+        logger.exception("NCBI request failed: %s", exc)
+        return Response({'message': f'无法连接 NCBI 服务：{exc}'}, status=status.HTTP_502_BAD_GATEWAY)
+    except Exception as exc:
+        logger.exception("Unexpected NCBI import failure: %s", exc)
+        return Response({'message': f'下载失败：{exc}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    file_obj = None
+    try:
+        with open(download_result.file_path, 'rb') as handle:
+            django_file = DjangoFile(handle, name=download_result.filename)
+
+            raw_tags = request.data.get('tags')
+            user_tags = []
+            if isinstance(raw_tags, list):
+                user_tags = [str(tag).strip() for tag in raw_tags if str(tag).strip()]
+            elif isinstance(raw_tags, str):
+                user_tags = [tag.strip() for tag in raw_tags.split(',') if tag.strip()]
+            base_tags = ['NCBI', download_result.db.upper()]
+            combined_tags = []
+            for tag in base_tags + user_tags:
+                if tag and tag not in combined_tags:
+                    combined_tags.append(tag)
+            tag_string = ','.join(combined_tags)
+
+            metadata = download_result.metadata or {}
+            description = metadata.get('title') or metadata.get('extra') or ''
+            if metadata.get('summary'):
+                description = f"{description}\n{metadata['summary']}".strip()
+
+            file_obj = File.objects.create(
+                user=request.user,
+                file=django_file,
+                upload_method='NCBI Import',
+                parent_folder=parent_folder,
+                title=metadata.get('title') or download_result.filename,
+                project=project,
+                original_filename=download_result.filename,
+                file_format=download_result.file_format,
+                document_type=download_result.document_type,
+                access_level=access_level,
+                organism=metadata.get('organism') or '',
+                experiment_type=metadata.get('experiment_type') or '',
+                tags=tag_string,
+                description=description,
+            )
+            file_obj.extracted_metadata = metadata
+            file_obj.save()
+    finally:
+        if os.path.exists(download_result.file_path):
+            os.remove(download_result.file_path)
+
+    serializer = FileSerializer(file_obj, context={'request': request})
+    return Response({'file': serializer.data, 'metadata': download_result.metadata}, status=status.HTTP_201_CREATED)
 
 
 @csrf_exempt
@@ -93,9 +463,6 @@ def file_delete(request, file_id):
 @permission_classes([IsAuthenticated])
 def file_download(request, file_id):
     """文件下载"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
     try:
         # 获取文件对象
         try:
@@ -213,6 +580,86 @@ def file_download(request, file_id):
     except Exception as e:
         logger.error(f"Unexpected error in file download: file_id={file_id}, error={str(e)}")
         raise Http404("Download failed")
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def publish_cellxgene(request, file_id):
+    """将指定文件发布到 Cellxgene 数据目录以便预览
+
+    要求：文件为 .h5ad 格式；将物理文件复制到 settings.CELLXGENE_DATA_DIR 下，
+    避免破坏用户原始文件结构。返回发布后的目标文件名及目录。
+    """
+    try:
+        # 获取文件对象（仅限当前用户）
+        try:
+            file_obj = File.objects.get(id=file_id, user=request.user)
+        except File.DoesNotExist:
+            return Response({'message': '文件不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 验证物理文件存在
+        if not file_obj.file or not os.path.exists(file_obj.file.path):
+            return Response({'message': '物理文件不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 校验扩展名为 .h5ad
+        original = file_obj.original_filename or os.path.basename(file_obj.file.name)
+        if not str(original).lower().endswith('.h5ad'):
+            return Response({'message': '仅支持 .h5ad 文件发布到 Cellxgene'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 目标目录（可通过环境变量 CELLXGENE_DATA_DIR 配置）
+        from django.conf import settings
+        target_dir = getattr(settings, 'CELLXGENE_DATA_DIR', os.path.join(settings.BASE_DIR, 'cellxgene_data'))
+        os.makedirs(target_dir, exist_ok=True)
+
+        # 安全文件名：避免特殊字符与路径穿越
+        safe_basename = re.sub(r'[^A-Za-z0-9\._-]', '_', os.path.basename(original))
+        target_filename = f"{file_obj.id}__{safe_basename}"
+        target_path = os.path.join(target_dir, target_filename)
+
+        try:
+            shutil.copy2(file_obj.file.path, target_path)
+        except Exception as e:
+            return Response({'message': f'复制文件失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        prepare_info = prepare_h5ad_for_cellxgene(target_path)
+        if prepare_info.get('status') == 'error':
+            message = f"已复制到 Cellxgene 数据目录，但无法生成可视化布局：{prepare_info.get('message')}"
+            logger.error("Cellxgene layout preparation failed for %s: %s", target_filename, prepare_info)
+            return Response(
+                {
+                    'message': message,
+                    'published_file': target_filename,
+                    'target_dir': target_dir,
+                    'cellxgene': {'status': 'error', 'message': prepare_info.get('message')},
+                    'layout': prepare_info,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        restart_info = restart_cellxgene_process(target_path)
+        message = '已发布到 Cellxgene 数据目录'
+
+        status_text = restart_info.get('status')
+        if status_text == 'started':
+            message += '，Cellxgene 正在重新加载该文件，请稍候片刻。'
+        elif status_text == 'skipped':
+            message += '。自动重启已关闭，请手动启动 Cellxgene 服务。'
+        elif status_text == 'error':
+            detail = restart_info.get('message') or 'Cellxgene 启动失败'
+            message += f'，但无法自动启动 Cellxgene：{detail}'
+            logger.error("Cellxgene restart failed for file %s: %s", target_filename, detail)
+
+        response_payload = {
+            'message': message,
+            'published_file': target_filename,
+            'target_dir': target_dir,
+            'layout': prepare_info,
+            'cellxgene': restart_info,
+            'cellxgene_port': getattr(settings, 'CELLXGENE_PORT', 5005),
+        }
+        return Response(response_payload, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': f'发布过程中发生错误: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])

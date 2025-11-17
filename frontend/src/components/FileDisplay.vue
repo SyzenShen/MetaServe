@@ -8,25 +8,25 @@
           <svg class="waves-header-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M14 2H6C4.9 2 4.01 2.9 4.01 4L4 20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20Z" fill="currentColor"/>
           </svg>
-          名称
+          Name
         </div>
         <div class="waves-header-cell waves-size-cell">
           <svg class="waves-header-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="currentColor"/>
           </svg>
-          大小
+          Size
         </div>
         <div class="waves-header-cell waves-date-cell">
           <svg class="waves-header-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M19 3H18V1H16V3H8V1H6V3H5C3.89 3 3.01 3.9 3.01 5L3 19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V8H19V19ZM7 10H12V15H7V10Z" fill="currentColor"/>
           </svg>
-          修改时间
+          Modified
         </div>
         <div class="waves-header-cell waves-action-cell">
           <svg class="waves-header-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 8C13.1 8 14 7.1 14 6C14 4.9 13.1 4 12 4C10.9 4 10 4.9 10 6C10 7.1 10.9 8 12 8ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10ZM12 16C10.9 16 10 16.9 10 18C10 19.1 10.9 20 12 20C13.1 20 14 19.1 14 18C14 16.9 13.1 16 12 16Z" fill="currentColor"/>
           </svg>
-          操作
+          Actions
         </div>
       </div>
       
@@ -47,7 +47,7 @@
             </div>
             <div class="waves-file-info">
               <div class="waves-file-name">{{ folder.name }}</div>
-              <div class="waves-file-type">文件夹</div>
+              <div class="waves-file-type">Folder</div>
             </div>
           </div>
           <div class="waves-cell waves-size-cell">
@@ -58,10 +58,12 @@
           </div>
           <div class="waves-cell waves-action-cell">
             <div class="waves-action-group">
+              <!-- 占位：与文件行保持同样的第一列，使下载按钮纵向对齐 -->
+              <span class="waves-action-placeholder" aria-hidden="true"></span>
               <button 
                 class="waves-action-btn waves-download-btn"
                 @click.stop="downloadFolder(folder.id)"
-                title="下载文件夹"
+                title="Download Folder"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 20H19V18H5M19 9H15V3H9V9H5L12 16L19 9Z" fill="currentColor"/>
@@ -70,7 +72,7 @@
               <button 
                 class="waves-action-btn waves-delete-btn"
                 @click.stop="deleteFolder(folder.id)"
-                title="删除文件夹"
+                title="Delete Folder"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M19 4H15.5L14.5 3H9.5L8.5 4H5V6H19M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19Z" fill="currentColor"/>
@@ -112,10 +114,33 @@
           </div>
           <div class="waves-cell waves-action-cell">
             <div class="waves-action-group">
+              <!-- 先显示 Cellxgene（仅 .h5ad 有），否则用占位保持下载按钮纵向对齐 -->
+              <template v-if="isH5ad(file.original_filename)">
+                <button
+                  class="waves-action-btn waves-cellxgene-btn"
+                  @click.stop="sendToCellxgene(file)"
+                  title="Send to Cellxgene"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 细胞膜：随按钮颜色变化的实心圆 -->
+                    <circle cx="12" cy="12" r="8" fill="currentColor" />
+                    <!-- 细胞核：白色实心圆，保持对比度 -->
+                    <circle class="cell-nucleus" cx="12" cy="12" r="3" fill="#ffffff" />
+                    <!-- 细胞器：白色点状 -->
+                    <circle class="cell-organelle" cx="8.5" cy="9.5" r="1" fill="#ffffff" />
+                    <circle class="cell-organelle" cx="15.5" cy="14.5" r="1.2" fill="#ffffff" />
+                    <!-- 胞质纹理：白色曲线 -->
+                    <path class="cell-texture" d="M7 12c2.5 1.5 4.8 1.5 6 0" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" />
+                  </svg>
+                </button>
+              </template>
+              <span v-else class="waves-action-placeholder" aria-hidden="true"></span>
+
+              <!-- 下载按钮固定在第二列，实现纵向对齐 -->
               <button 
                 class="waves-action-btn waves-download-btn"
                 @click="downloadFile(file)"
-                title="下载文件"
+                title="Download File"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 20H19V18H5M19 9H15V3H9V9H5L12 16L19 9Z" fill="currentColor"/>
@@ -127,7 +152,7 @@
                   class="waves-action-btn"
                   @click.stop="pauseDownload(file.id)"
                   v-if="!downloadPaused[file.id]"
-                  title="暂停下载"
+                  title="Pause Download"
                 >
                   ||
                 </button>
@@ -135,14 +160,14 @@
                   class="waves-action-btn"
                   @click.stop="resumeDownload(file.id, file.original_filename || `file_${file.id}`, file.file_size)"
                   v-else
-                  title="继续下载"
+                  title="Resume Download"
                 >
                   ▶
                 </button>
                 <button 
                   class="waves-action-btn waves-delete-btn"
                   @click.stop="cancelDownload(file.id)"
-                  title="取消下载"
+                  title="Cancel Download"
                 >
                   ✕
                 </button>
@@ -150,7 +175,7 @@
               <button 
                 class="waves-action-btn waves-delete-btn"
                 @click.stop="deleteFile(file.id)"
-                title="删除文件"
+                title="Delete File"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M19 4H15.5L14.5 3H9.5L8.5 4H5V6H19M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19Z" fill="currentColor"/>
@@ -179,10 +204,12 @@
               </svg>
             </div>
             <div class="waves-item-actions">
+              <!-- 占位：与文件卡保持同样的第一列，使下载按钮纵向对齐 -->
+              <span class="waves-action-placeholder" aria-hidden="true"></span>
               <button 
                 class="waves-action-btn waves-download-btn"
                 @click.stop="downloadFolder(folder.id)"
-                title="下载文件夹"
+                title="Download Folder"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 20H19V18H5M19 9H15V3H9V9H5L12 16L19 9Z" fill="currentColor"/>
@@ -191,7 +218,7 @@
               <button 
                 class="waves-action-btn waves-delete-btn"
                 @click.stop="deleteFolder(folder.id)"
-                title="删除文件夹"
+                title="Delete Folder"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M19 4H15.5L14.5 3H9.5L8.5 4H5V6H19M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19Z" fill="currentColor"/>
@@ -202,7 +229,7 @@
           <div class="waves-card-body">
             <div class="waves-item-name">{{ folder.name }}</div>
             <div class="waves-item-meta">
-              <span class="waves-item-type">文件夹</span>
+              <span class="waves-item-type">Folder</span>
               <span class="waves-item-size">{{ formatFileSize(folder.folder_size) }}</span>
               <span class="waves-item-date">{{ formatDate(folder.created_at) }}</span>
             </div>
@@ -222,10 +249,33 @@
               </svg>
             </div>
             <div class="waves-item-actions">
+              <!-- 先显示 Cellxgene（仅 .h5ad 有），否则用占位保持下载按钮纵向对齐 -->
+              <template v-if="isH5ad(file.original_filename)">
+                <button 
+                  class="waves-action-btn waves-cellxgene-btn"
+                  @click.stop="sendToCellxgene(file)"
+                  title="Send to Cellxgene"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 细胞膜：随按钮颜色变化的实心圆 -->
+                    <circle cx="12" cy="12" r="8" fill="currentColor" />
+                    <!-- 细胞核：白色实心圆，保持对比度 -->
+                    <circle class="cell-nucleus" cx="12" cy="12" r="3" fill="#ffffff" />
+                    <!-- 细胞器：白色点状 -->
+                    <circle class="cell-organelle" cx="8.5" cy="9.5" r="1" fill="#ffffff" />
+                    <circle class="cell-organelle" cx="15.5" cy="14.5" r="1.2" fill="#ffffff" />
+                    <!-- 胞质纹理：白色曲线 -->
+                    <path class="cell-texture" d="M7 12c2.5 1.5 4.8 1.5 6 0" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" />
+                  </svg>
+                </button>
+              </template>
+              <span v-else class="waves-action-placeholder" aria-hidden="true"></span>
+
+              <!-- 下载按钮固定在第二列，实现纵向对齐 -->
               <button 
                 class="waves-action-btn waves-download-btn"
                 @click="downloadFile(file)"
-                title="下载文件"
+                title="Download File"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 20H19V18H5M19 9H15V3H9V9H5L12 16L19 9Z" fill="currentColor"/>
@@ -234,7 +284,7 @@
               <button 
                 class="waves-action-btn waves-delete-btn"
                 @click.stop="deleteFile(file.id)"
-                title="删除文件"
+                title="Delete File"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M19 4H15.5L14.5 3H9.5L8.5 4H5V6H19M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19Z" fill="currentColor"/>
@@ -262,20 +312,20 @@
         </svg>
       </div>
       <div class="waves-empty-content">
-        <h3 class="waves-empty-title">此文件夹为空</h3>
-        <p class="waves-empty-description">您可以上传文件或创建新文件夹来开始使用</p>
+        <h3 class="waves-empty-title">This folder is empty</h3>
+        <p class="waves-empty-description">Upload files or create a new folder to get started</p>
         <div class="waves-empty-actions">
           <button class="waves-btn waves-btn-primary">
             <svg class="waves-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M14 2H6C4.9 2 4.01 2.9 4.01 4L4 20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20ZM8 15.01L8.01 15H16V17H8V15.01ZM16 11H8V13H16V11ZM12 7V9H16V7H12Z" fill="currentColor"/>
             </svg>
-            上传文件
+            Upload Files
           </button>
           <button class="waves-btn waves-btn-secondary">
             <svg class="waves-btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M10 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.11 2.89 20 4 20H20C21.11 20 22 19.11 22 18V8C22 6.89 21.11 6 20 6H12L10 4Z" fill="currentColor"/>
             </svg>
-            新建文件夹
+            New Folder
           </button>
         </div>
       </div>
@@ -285,9 +335,17 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useFilesStore } from '../stores/files'
 
 const filesStore = useFilesStore()
+const router = useRouter()
+
+// 仅当后缀为 .h5ad 时显示“发送到 Cellxgene”
+const isH5ad = (name) => {
+  const n = (name || '').toLowerCase()
+  return n.endsWith('.h5ad')
+}
 
 // 计算属性
 const viewMode = computed(() => filesStore.viewMode)
@@ -309,18 +367,18 @@ const deleteFolder = async (folderId) => {
   const confirmed = await new Promise((resolve) => {
     // 使用 setTimeout 确保在下一个事件循环中显示对话框
     setTimeout(() => {
-      const result = confirm('确定要删除这个文件夹吗？')
+      const result = confirm('Are you sure you want to delete this folder?')
       resolve(result)
     }, 0)
   })
   
   if (!confirmed) {
-    return // 用户点击取消，直接返回，不执行删除
+    return // User clicked cancel; do not proceed
   }
   
   const result = await filesStore.deleteFolder(folderId)
   if (!result.success) {
-    alert(`删除失败: ${result.error}`)
+    alert(`Delete failed: ${result.error}`)
   }
 }
 
@@ -329,18 +387,18 @@ const deleteFile = async (fileId) => {
   const confirmed = await new Promise((resolve) => {
     // 使用 setTimeout 确保在下一个事件循环中显示对话框
     setTimeout(() => {
-      const result = confirm('确定要删除这个文件吗？')
+      const result = confirm('Are you sure you want to delete this file?')
       resolve(result)
     }, 0)
   })
   
   if (!confirmed) {
-    return // 用户点击取消，直接返回，不执行删除
+    return // User clicked cancel; do not proceed
   }
   
   const result = await filesStore.deleteFile(fileId)
   if (!result.success) {
-    alert(`删除失败: ${result.error}`)
+    alert(`Delete failed: ${result.error}`)
   }
 }
 
@@ -352,20 +410,20 @@ const downloadFile = async (file, retryCount = 0) => {
     // 获取token
     const token = localStorage.getItem('token')
     if (!token) {
-      filesStore.showErrorNotification('请先登录')
+      filesStore.showErrorNotification('Please log in first')
       return
     }
 
     // 显示下载开始提示
     if (retryCount === 0) {
-      filesStore.showDownloadNotification(`开始下载: ${file.original_filename || file.name || `文件_${file.id}`}`)
+      filesStore.showDownloadNotification(`Starting download: ${file.original_filename || file.name || `file_${file.id}`}`)
     }
 
     // 检查文件大小，大文件使用store中的断点续传下载
     if (file.file_size && file.file_size > 50 * 1024 * 1024) { // 50MB以上
       const result = await filesStore.downloadFile(file.id, file.original_filename || `file_${file.id}`, file.file_size)
       if (!result.success) {
-        throw new Error(result.error || '下载失败')
+        throw new Error(result.error || 'Download failed')
       }
       return
     }
@@ -387,22 +445,22 @@ const downloadFile = async (file, retryCount = 0) => {
     if (!response.ok) {
       // 检查是否是认证问题
       if (response.status === 401) {
-        filesStore.showErrorNotification('登录已过期，请重新登录')
+        filesStore.showErrorNotification('Session expired, please log in again')
         return
       }
       // 检查是否是文件不存在
       if (response.status === 404) {
-        filesStore.showErrorNotification('文件不存在或已被删除')
+        filesStore.showErrorNotification('File not found or has been removed')
         return
       }
-      throw new Error(`下载失败: ${response.status} ${response.statusText}`)
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`)
     }
 
     // 检查响应内容类型，避免下载错误页面
     const contentType = response.headers.get('content-type') || ''
     if (contentType.includes('text/html') || contentType.includes('application/json')) {
       const errorText = await response.text()
-      throw new Error(errorText || '服务器返回错误页面')
+      throw new Error(errorText || 'Server returned an error page')
     }
 
     // 获取文件blob
@@ -410,7 +468,7 @@ const downloadFile = async (file, retryCount = 0) => {
     
     // 检查blob大小，避免下载空文件
     if (blob.size === 0) {
-      throw new Error('下载的文件为空')
+      throw new Error('Downloaded file is empty')
     }
     
     // 创建下载链接
@@ -426,7 +484,7 @@ const downloadFile = async (file, retryCount = 0) => {
     window.URL.revokeObjectURL(url)
     
   } catch (error) {
-    console.error(`下载失败 (尝试 ${retryCount + 1}/${maxRetries + 1}):`, error)
+    console.error(`Download failed (attempt ${retryCount + 1}/${maxRetries + 1}):`, error)
     
     // 检查是否是网络错误且可以重试
     const isNetworkError = error.name === 'AbortError' || 
@@ -435,7 +493,7 @@ const downloadFile = async (file, retryCount = 0) => {
                           error.message.includes('timeout')
     
     if (isNetworkError && retryCount < maxRetries) {
-      console.log(`${retryDelay}ms 后重试下载...`)
+      console.log(`Retrying in ${retryDelay}ms...`)
       setTimeout(() => {
         downloadFile(file, retryCount + 1)
       }, retryDelay)
@@ -445,12 +503,12 @@ const downloadFile = async (file, retryCount = 0) => {
     // 显示用户友好的错误信息
     let errorMessage = error.message
     if (error.name === 'AbortError') {
-      errorMessage = '下载超时，请检查网络连接'
+      errorMessage = 'Download timed out, please check your network'
     } else if (error.message.includes('fetch')) {
-      errorMessage = '网络连接失败，请检查网络'
+      errorMessage = 'Network connection failed, please check your network'
     }
     
-    filesStore.showErrorNotification(`下载失败: ${errorMessage}`)
+    filesStore.showErrorNotification(`Download failed: ${errorMessage}`)
   }
 }
 
@@ -465,12 +523,97 @@ const cancelDownload = async (fileId) => {
   try { await filesStore.cancelDownload(fileId) } catch (_) {}
 }
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+const waitForCellxgeneReady = async (datasetFileName, timeout = 60000, interval = 2000) => {
+  const baseUrl = import.meta.env.VITE_CELLXGENE_URL || '/cellxgene/'
+  if (/^https?:\/\//.test(baseUrl)) {
+    // External address (e.g., http://localhost:5005/); cannot poll across origins
+    await sleep(4000)
+    return true
+  }
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
+  const endpoint = `${cleanBaseUrl}/api/v0.2/config`
+  const expected = (datasetFileName || '').replace(/\.[^.]+$/, '')
+  const start = Date.now()
+
+  while (Date.now() - start < timeout) {
+    try {
+      const res = await fetch(endpoint, { method: 'GET', cache: 'no-store' })
+      if (res.ok) {
+        const json = await res.json()
+        const datasetName = json?.config?.displayNames?.dataset || ''
+        if (!expected || datasetName === expected) {
+          return true
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to check Cellxgene status:', err)
+    }
+    await sleep(interval)
+  }
+
+  throw new Error('Cellxgene loading timed out, please try again later')
+}
+
+// 发送到 Cellxgene 并跳转预览页
+const sendToCellxgene = async (file) => {
+  console.log('开始发送到 Cellxgene...', file)
+  const name = file.original_filename || ''
+  if (!name.toLowerCase().endsWith('.h5ad')) {
+    filesStore.showErrorNotification('Only .h5ad files can be sent to Cellxgene')
+    console.error('Unsupported file type:', name)
+    return
+  }
+
+  console.log(`正在调用 publishToCellxgene，文件ID: ${file.id}`)
+  try {
+    filesStore.showLoadingOverlay('Sending file to Cellxgene...')
+    const result = await filesStore.publishToCellxgene(file.id)
+    console.log('publishToCellxgene 调用结果:', result)
+
+    if (result && result.success) {
+      // 后端会返回已复制到 Cellxgene 数据目录中的实际文件名（包含安全前缀）
+      const publishedFile = result.data?.published_file
+      const fallbackName = name.split('/').pop() || name
+      const fileNameForPreview = publishedFile || fallbackName
+      filesStore.setLastCellxgeneFile(fileNameForPreview)
+      console.log(
+          `Publish succeeded. Redirecting to /cellxgene-app with: ${fileNameForPreview}`,
+        { publishedFile, fallbackName }
+      )
+
+      try {
+    filesStore.showLoadingOverlay('Cellxgene is loading data, please wait...')
+        await waitForCellxgeneReady(fileNameForPreview, 90000, 3000)
+      } catch (waitError) {
+    console.error('Waiting for Cellxgene data load failed:', waitError)
+    filesStore.showErrorNotification(waitError.message || 'Cellxgene load timeout')
+        return
+      }
+      // 跳转到包装页进行预览，并传递实际文件名参数
+      router.push({
+        path: '/cellxgene-app',
+        query: { file: fileNameForPreview }
+      })
+    } else {
+    console.error('Publish failed, result from store:', result)
+    filesStore.showErrorNotification(result?.error || 'Publish failed, see console logs')
+    }
+  } catch (error) {
+    console.error('Exception during publishToCellxgene:', error)
+    filesStore.showErrorNotification('Unknown error when sending to Cellxgene')
+  } finally {
+    filesStore.hideLoadingOverlay()
+  }
+}
+
 const downloadFolder = async (folderId) => {
   try {
     // 获取token
     const token = localStorage.getItem('token')
     if (!token) {
-      alert('请先登录')
+      alert('Please log in first')
       return
     }
 
@@ -483,7 +626,7 @@ const downloadFolder = async (folderId) => {
     })
 
     if (!response.ok) {
-      throw new Error(`下载失败: ${response.status} ${response.statusText}`)
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`)
     }
 
     // 获取文件blob
@@ -501,8 +644,8 @@ const downloadFolder = async (folderId) => {
     // 清理URL对象
     window.URL.revokeObjectURL(url)
   } catch (error) {
-    console.error('文件夹下载失败:', error)
-    alert(`下载失败: ${error.message}`)
+    console.error('Folder download failed:', error)
+    alert(`Download failed: ${error.message}`)
   }
 }
 
@@ -517,36 +660,36 @@ const formatFileSize = (bytes) => {
 const formatDate = (dateString) => {
   if (!dateString) return '-'
   const date = new Date(dateString)
-  return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { 
+  return date.toLocaleDateString('en-US') + ' ' + date.toLocaleTimeString('en-US', { 
     hour: '2-digit', 
     minute: '2-digit' 
   })
 }
 
 const getFileType = (filename) => {
-  if (!filename) return '未知文件'
+  if (!filename) return 'Unknown file'
   const ext = filename.split('.').pop()?.toLowerCase()
   
   const typeMap = {
-    // 图片
-    'jpg': '图片文件', 'jpeg': '图片文件', 'png': '图片文件', 'gif': '图片文件', 'bmp': '图片文件', 'svg': '图片文件',
-    // 文档
-    'pdf': 'PDF文档', 'doc': 'Word文档', 'docx': 'Word文档', 'txt': '文本文件', 'rtf': '富文本文件',
-    // 表格
-    'xls': 'Excel表格', 'xlsx': 'Excel表格', 'csv': 'CSV文件',
-    // 演示文稿
+    // Images
+    'jpg': 'Image', 'jpeg': 'Image', 'png': 'Image', 'gif': 'Image', 'bmp': 'Image', 'svg': 'Image',
+    // Documents
+    'pdf': 'PDF Document', 'doc': 'Word Document', 'docx': 'Word Document', 'txt': 'Text File', 'rtf': 'Rich Text File',
+    // Spreadsheets
+    'xls': 'Excel Spreadsheet', 'xlsx': 'Excel Spreadsheet', 'csv': 'CSV File',
+    // Presentations
     'ppt': 'PowerPoint', 'pptx': 'PowerPoint',
-    // 压缩文件
-    'zip': '压缩文件', 'rar': '压缩文件', '7z': '压缩文件', 'tar': '压缩文件', 'gz': '压缩文件',
-    // 音频
-    'mp3': '音频文件', 'wav': '音频文件', 'flac': '音频文件', 'aac': '音频文件',
-    // 视频
-    'mp4': '视频文件', 'avi': '视频文件', 'mkv': '视频文件', 'mov': '视频文件', 'wmv': '视频文件',
-    // 代码
-    'js': 'JavaScript', 'html': 'HTML文件', 'css': 'CSS文件', 'py': 'Python文件', 'java': 'Java文件', 'cpp': 'C++文件'
+    // Archives
+    'zip': 'Archive', 'rar': 'Archive', '7z': 'Archive', 'tar': 'Archive', 'gz': 'Archive',
+    // Audio
+    'mp3': 'Audio', 'wav': 'Audio', 'flac': 'Audio', 'aac': 'Audio',
+    // Video
+    'mp4': 'Video', 'avi': 'Video', 'mkv': 'Video', 'mov': 'Video', 'wmv': 'Video',
+    // Code
+    'js': 'JavaScript', 'html': 'HTML File', 'css': 'CSS File', 'py': 'Python File', 'java': 'Java File', 'cpp': 'C++ File'
   }
   
-  return typeMap[ext] || '未知文件'
+  return typeMap[ext] || 'Unknown File'
 }
 </script>
 
@@ -672,6 +815,25 @@ const getFileType = (filename) => {
   color: white;
 }
 
+/* 列表视图：文件夹图标改为浅灰、背景中性 */
+.waves-list-view .waves-folder-icon {
+  background: var(--waves-surface-secondary);
+  color: var(--waves-text-secondary);
+  border: 1px solid var(--waves-border-light);
+}
+
+/* 列表视图：文件图标同步为浅灰、背景中性 */
+.waves-list-view .waves-document-icon {
+  background: var(--waves-surface-secondary);
+  color: var(--waves-text-secondary);
+  border: 1px solid var(--waves-border-light);
+}
+
+.waves-list-view .waves-file-icon svg {
+  color: inherit;
+  fill: currentColor;
+}
+
 .waves-file-icon svg {
   width: 20px;
   height: 20px;
@@ -707,11 +869,12 @@ const getFileType = (filename) => {
 .waves-action-group {
   display: flex;
   gap: 0.5rem;
-  opacity: 0;
+  opacity: 1; /* 始终显示浅色按钮 */
   transition: opacity 0.3s ease;
 }
 
-.waves-table-row:hover .waves-action-group {
+/* 保持与 hover 一致，避免仅在悬停时出现 */
+.waves-table-row .waves-action-group {
   opacity: 1;
 }
 
@@ -730,20 +893,47 @@ const getFileType = (filename) => {
 }
 
 .waves-action-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+}
+/* 让 Cellxgene 图标更大一些，仅影响该按钮 */
+.waves-cellxgene-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* 用于占位，保证下载按钮纵向对齐 */
+.waves-action-placeholder {
+  width: 32px;
+  height: 32px;
+  display: inline-block;
 }
 
 .waves-download-btn:hover {
   background: #10b981;
-  color: white;
+  color: #fff;
   transform: scale(1.1);
 }
 
 .waves-delete-btn:hover {
   background: #ef4444;
-  color: white;
+  color: #fff;
   transform: scale(1.1);
+}
+
+/* 发送到 Cellxgene 按钮样式 */
+.waves-cellxgene-btn:hover {
+  background: var(--primary, rgb(58, 126, 185));
+  color: #fff;
+  transform: scale(1.1);
+}
+/* 悬停时让细胞结构保持可见：膜反白，核/细胞器/纹理切换为主色 */
+.waves-cellxgene-btn:hover .cell-nucleus,
+.waves-cellxgene-btn:hover .cell-organelle {
+  fill: var(--primary, rgb(58, 126, 185));
+}
+.waves-cellxgene-btn:hover .cell-texture {
+  stroke: var(--primary, rgb(58, 126, 185));
 }
 
 /* 下载进度条 */
@@ -800,7 +990,7 @@ const getFileType = (filename) => {
 }
 
 .waves-folder-card {
-  background: linear-gradient(135deg, var(--waves-primary-50), var(--waves-surface-secondary));
+  background: linear-gradient(135deg, var(--waves-surface-secondary), var(--waves-surface-secondary)); /* 淡化色彩，突出浅灰图标 */
 }
 
 .waves-card-header {
@@ -818,11 +1008,16 @@ const getFileType = (filename) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Grid 模式下的文件/文件夹图标使用浅灰 */
+  color: var(--waves-text-secondary);
+  opacity: 0.85;
 }
 
 .waves-grid-item .waves-item-icon svg {
   width: 24px;
   height: 24px;
+  color: inherit; /* 继承浅灰色 */
+  fill: currentColor; /* 使用当前颜色填充路径 */
 }
 
 .waves-item-actions {

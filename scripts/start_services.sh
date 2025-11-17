@@ -19,6 +19,18 @@ VITE_BIN="$REPO_ROOT/frontend/node_modules/vite/bin/vite.js"
 
 mkdir -p "$LOG_DIR" "$PID_DIR"
 
+# 将用户本地可执行目录加入 PATH，便于解析 ~/.local/bin/cellxgene
+export PATH="$HOME/.local/bin:$PATH"
+
+# 解析并导出 Cellxgene 路径与用于布局生成的 Python 解释器
+# 允许外部覆盖：若环境已设置则保持不变
+CELLXGENE_CMD="${CELLXGENE_CMD:-$(command -v cellxgene || true)}"
+CELLXGENE_PYTHON="${CELLXGENE_PYTHON:-$(command -v python3 || command -v python || true)}"
+export CELLXGENE_CMD CELLXGENE_PYTHON
+
+echo "CELLXGENE_CMD=${CELLXGENE_CMD:-<not found>}"
+echo "CELLXGENE_PYTHON=${CELLXGENE_PYTHON:-<not found>}"
+
 is_port_up() {
   local port="$1"
   curl -sSfI "http://localhost:${port}" --max-time 1 >/dev/null 2>&1

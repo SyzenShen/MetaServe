@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StoragePie 预览</title>
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif; background:#f6f8fb; margin:0; padding:24px; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .card { background:#fff; border-radius:16px; padding:16px; box-shadow:0 12px 30px rgba(27,44,72,.08); }
+    .header { display:flex; justify-content:space-between; align-items:baseline; }
+    .title { margin:0; font-size:16px; font-weight:600; color:#2c3e50; }
+    .subtitle { color:#697481; font-size:12px; }
+    .legend { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+    .legend-item { display:flex; align-items:center; gap:8px; }
+    .swatch { width:12px; height:12px; border-radius:3px; display:inline-block; }
+    .used { background:#3a7eb9; }
+    .free { background:#a6c9e6; }
+    .value { margin-left:auto; color:#697481; font-size:12px; }
+    .control { margin-top:16px; display:flex; gap:8px; align-items:center; }
+    input[type="number"] { width:200px; padding:6px 8px; border:1px solid #d4d9e3; border-radius:8px; }
+    canvas { display:block; margin:12px auto; }
+  </style>
+  </head>
+<body>
+  <div class="wrap" style="display:grid; grid-template-columns: 1fr 320px; gap:16px; align-items:start;">
+    <div style="display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap:16px;">
+      <div class="card"><div class="header"><h4 class="title">Total Files</h4><span class="subtitle">示意卡片</span></div><p>左侧示意：卡片 1</p></div>
+      <div class="card"><div class="header"><h4 class="title">Total Folders</h4><span class="subtitle">示意卡片</span></div><p>左侧示意：卡片 2</p></div>
+      <div class="card"><div class="header"><h4 class="title">Total Size</h4><span class="subtitle">示意卡片</span></div><p>左侧示意：卡片 3</p></div>
+      <div class="card"><div class="header"><h4 class="title">Total Quota</h4><span class="subtitle">示意卡片</span></div><p>左侧示意：卡片 4</p></div>
+    </div>
+    <div class="card">
+      <div class="header">
+        <h4 class="title">Storage Usage</h4>
+        <span id="subtitle" class="subtitle">—</span>
+      </div>
+      <canvas id="canvas" width="280" height="280"></canvas>
+      <div class="legend">
+        <div class="legend-item">
+          <span class="swatch used"></span>
+          <span>Used</span>
+          <span id="usedLabel" class="value">—</span>
+        </div>
+        <div class="legend-item">
+          <span class="swatch free"></span>
+          <span>Free</span>
+          <span id="freeLabel" class="value">—</span>
+        </div>
+      </div>
+      <div class="control">
+        <label>已用(GB)：<input id="usedInput" type="number" min="0" step="0.1" /></label>
+        <label>配额(GB)：<input id="quotaInput" type="number" min="1" step="1" /></label>
+        <button id="applyBtn">应用</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const canvas = document.getElementById('canvas')
+  const ctx = canvas.getContext('2d')
+  const subtitle = document.getElementById('subtitle')
+  const usedLabel = document.getElementById('usedLabel')
+  const freeLabel = document.getElementById('freeLabel')
+  const usedInput = document.getElementById('usedInput')
+  const quotaInput = document.getElementById('quotaInput')
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+  const formatBytes = (bytes) => {
+    if (!bytes || bytes <= 0) return '0 B'
+    const units = ['B','KB','MB','GB','TB']
+    const exp = Math.min(Math.floor(Math.log(bytes)/Math.log(1024)), units.length-1)
+    const val = bytes / Math.pow(1024, exp)
+    return `${val.toFixed(val >= 10 || exp === 0 ? 0 : 1)} ${units[exp]}`
+  }
+
+  function draw(usedBytes, quotaBytes) {
+    usedBytes = clamp(usedBytes, 0, quotaBytes)
+    const freeBytes = clamp(quotaBytes - usedBytes, 0, quotaBytes)
+
+    const w = canvas.width, h = canvas.height
+    const cx = w/2, cy = h/2
+    const outer = Math.min(w,h)/2 - 10
+    const inner = outer * 0.6
+
+    ctx.clearRect(0,0,w,h)
+    ctx.beginPath(); ctx.arc(cx,cy,outer,0,Math.PI*2); ctx.fillStyle='#f3f6fa'; ctx.fill()
+    ctx.globalCompositeOperation='destination-out'; ctx.beginPath(); ctx.arc(cx,cy,inner,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='source-over'
+
+    const start = -Math.PI/2
+    const usedRatio = quotaBytes > 0 ? usedBytes / quotaBytes : 0
+    const usedEnd = start + usedRatio * Math.PI * 2
+
+    ctx.beginPath(); ctx.arc(cx,cy,outer,start,usedEnd,false); ctx.lineTo(cx,cy); ctx.closePath(); ctx.fillStyle='#3a7eb9'; ctx.fill()
+    ctx.beginPath(); ctx.arc(cx,cy,outer,usedEnd,start+Math.PI*2,false); ctx.lineTo(cx,cy); ctx.closePath(); ctx.fillStyle='#a6c9e6'; ctx.fill()
+    ctx.globalCompositeOperation='destination-out'; ctx.beginPath(); ctx.arc(cx,cy,inner,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='source-over'
+
+    subtitle.textContent = `${formatBytes(usedBytes)} / ${formatBytes(quotaBytes)}`
+    usedLabel.textContent = formatBytes(usedBytes)
+    freeLabel.textContent = formatBytes(freeBytes)
+  }
+
+  function gb(n){ return n * 1024 * 1024 * 1024 }
+
+  // read query params or defaults
+  const params = new URLSearchParams(location.search)
+  const usedGB = parseFloat(params.get('usedGB') || '12.7')
+  const quotaGB = parseFloat(params.get('quotaGB') || '50')
+  usedInput.value = usedGB
+  quotaInput.value = quotaGB
+  draw(gb(usedGB), gb(quotaGB))
+
+  document.getElementById('applyBtn').addEventListener('click', () => {
+    const u = parseFloat(usedInput.value || '0')
+    const q = parseFloat(quotaInput.value || '1')
+    draw(gb(u), gb(q))
+  })
+</script>
+</body>
+</html>

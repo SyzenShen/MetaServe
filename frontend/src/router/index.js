@@ -8,6 +8,10 @@ import Register from '../views/Register.vue'
 import Profile from '../views/Profile.vue'
 import FileList from '../views/FileList.vue'
 import FileUpload from '../views/FileUpload.vue'
+import FileSearch from '../views/FileSearch.vue'
+import UploadTest from '../views/UploadTest.vue'
+import CellxgeneWrapper from '../views/CellxgeneWrapper.vue'
+import Download from '../views/Download.vue'
 
 const routes = [
   {
@@ -43,6 +47,32 @@ const routes = [
     path: '/upload',
     name: 'FileUpload',
     component: FileUpload,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/search',
+    name: 'FileSearch',
+    component: FileSearch,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/upload-test',
+    name: 'UploadTest',
+    component: UploadTest,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/cellxgene-app',
+    name: 'CellxgeneWrapper',
+    component: CellxgeneWrapper,
+    // Cellxgene 包装页对所有用户开放，避免登录状态阻塞查看
+    meta: {}
+  }
+  ,
+  {
+    path: '/download',
+    name: 'Download',
+    component: Download,
     meta: { requiresAuth: true }
   }
 ]

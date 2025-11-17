@@ -1,15 +1,15 @@
 <template>
   <div class="navigation-bar">
-    <!-- 左侧：面包屑导航 -->
+    <!-- Left: Breadcrumb navigation -->
     <div class="breadcrumb-section">
-      <!-- 返回上一级按钮 -->
+      <!-- Back to parent button -->
       <button 
         v-if="currentFolderId !== null"
         class="back-button"
         @click="navigateUp"
-        title="返回上一级目录"
+        title="Go back to parent"
       >
-        ← 返回
+        ← Back
       </button>
       
       <div class="breadcrumb">
@@ -33,15 +33,15 @@
       </div>
     </div>
     
-    <!-- 右侧：操作工具栏 -->
+      <!-- Right: Action toolbar -->
     <div class="toolbar-section">
-      <!-- 视图切换 -->
+      <!-- View toggle -->
       <div class="view-toggle">
         <button 
           class="view-btn"
           :class="{ active: viewMode === 'list' }"
           @click="setViewMode('list')"
-          title="列表视图"
+          title="List view"
         >
           ☰
         </button>
@@ -49,26 +49,34 @@
           class="view-btn"
           :class="{ active: viewMode === 'grid' }"
           @click="setViewMode('grid')"
-          title="网格视图"
+          title="Grid view"
         >
           ⊞
         </button>
       </div>
       
-      <!-- 操作按钮 -->
+      <!-- Actions -->
       <div class="action-buttons">
+        <button 
+          class="action-btn search-btn"
+          @click="goToSearch"
+          title="Search files"
+        >
+          Search
+        </button>
+        
         <button 
           class="action-btn"
           @click="showUploadDialog"
         >
-          上传文件
+          Upload
         </button>
         
         <button 
           class="action-btn"
           @click="showNewFolderDialog"
         >
-          新建文件夹
+          New Folder
         </button>
         
         <button 
@@ -76,7 +84,7 @@
           @click="refreshFiles"
           :disabled="isLoading"
         >
-          刷新
+          Refresh
         </button>
       </div>
     </div>
@@ -85,8 +93,10 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useFilesStore } from '../stores/files'
 
+const router = useRouter()
 const filesStore = useFilesStore()
 
 // 计算属性
@@ -126,6 +136,10 @@ const showNewFolderDialog = () => {
 
 const refreshFiles = () => {
   filesStore.fetchFiles(currentFolderId.value)
+}
+
+const goToSearch = () => {
+  router.push('/search')
 }
 </script>
 
@@ -201,7 +215,7 @@ const refreshFiles = () => {
 }
 
 .breadcrumb-item.active {
-  color: #0078d4;
+  color: rgb(58, 126, 185);
   font-weight: 500;
 }
 
@@ -255,13 +269,13 @@ const refreshFiles = () => {
 }
 
 .view-btn.active {
-  background-color: #0078d4;
+  background-color: rgb(58, 126, 185);
   color: white;
-  box-shadow: inset 0 2px 4px rgba(0, 120, 212, 0.3);
+  box-shadow: inset 0 2px 4px rgba(58, 126, 185, 0.3);
 }
 
 .view-btn.active:hover {
-  background-color: #106ebe;
+  background-color: rgb(45, 102, 150);
 }
 
 .action-buttons {
@@ -307,21 +321,21 @@ const refreshFiles = () => {
 }
 
 .action-btn.primary {
-  background-color: #0078d4;
+  background-color: rgb(58, 126, 185);
   color: white;
-  border-color: #0078d4;
-  box-shadow: 0 2px 4px rgba(0, 120, 212, 0.3);
+  border-color: rgb(58, 126, 185);
+  box-shadow: 0 2px 4px rgba(58, 126, 185, 0.3);
 }
 
 .action-btn.primary:hover {
-  background-color: #106ebe;
-  border-color: #106ebe;
-  box-shadow: 0 4px 8px rgba(0, 120, 212, 0.4);
+  background-color: rgb(45, 102, 150);
+  border-color: rgb(45, 102, 150);
+  box-shadow: 0 4px 8px rgba(45, 102, 150, 0.35);
 }
 
 .action-btn.primary:active {
-  background-color: #005a9e;
-  border-color: #005a9e;
+  background-color: rgb(37, 83, 121);
+  border-color: rgb(37, 83, 121);
 }
 
 /* 响应式设计 */
