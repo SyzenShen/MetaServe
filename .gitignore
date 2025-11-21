@@ -34,3 +34,5 @@ cellxgene_data/
 # OS/IDE
 .DS_Store
 .vscode/
+cellxgene/cellxgene/cellxgene_env/
+.node/
