@@ -127,8 +127,10 @@ export default {
 }
 
 /* 企业级认证卡片样式 */
-.waves-auth-card {
+.card.page-card.waves-auth-card {
   max-width: 480px;
+}
+.waves-auth-card {
   width: 100%;
   background: var(--waves-card-bg);
   backdrop-filter: var(--waves-backdrop-filter);
@@ -319,7 +321,7 @@ export default {
 
 .waves-divider-text {
   position: relative;
-  background: var(--waves-card-bg);
+  background: var(--waves-surface-secondary, #f5f7fb); /* 使用浅灰背景以匹配页面 */
   padding: 0 16px;
   color: var(--waves-text-muted);
   font-size: 0.9rem;

@@ -18,6 +18,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,3 +31,6 @@ urlpatterns = [
     # Redirect root to file list page to avoid 404 at '/'
     path('', RedirectView.as_view(url='/file/', permanent=False)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Serve static files during development or when not behind a dedicated static server
+urlpatterns += staticfiles_urlpatterns()

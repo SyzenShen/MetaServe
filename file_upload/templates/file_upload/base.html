@@ -6,12 +6,176 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+<!-- 统一前后端导航字体：使用 Inter 400/500/600/700 -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* 统一与前端 Navbar 风格 */
+  .navbar.waves-transparent {
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    box-shadow: 0 1px 0 rgba(27, 44, 72, 0.08), 0 6px 12px rgba(0, 0, 0, 0.12);
+    transition: all 0.3s ease;
+    min-height: 72px;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+  .navbar .container-fluid {
+    padding: 0 20px;
+  }
+  /* 完整 Flex 化导航结构 */
+  .nav-flex {
+    display: flex !important;
+    align-items: center;
+  }
+  .nav-left {
+    display: flex;
+    align-items: center;
+  }
+  .nav-right {
+    display: flex;
+  }
+  .navbar-header {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto; /* 固定在左侧 */
+  }
+  /* 让右侧菜单靠右，与前端一致 */
+  /* 不再使用 Bootstrap 的 collapse 作为布局容器 */
+  .navbar-nav {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto; /* 不扩展填充剩余空间，仅按内容宽度 */
+    margin: 0 !important; /* 清理所有外边距 */
+    padding: 0 !important; /* 清理所有内边距 */
+    float: none !important; /* 覆盖 Bootstrap 默认浮动 */
+    background: transparent !important; /* 移除可能的紫色背景 */
+  }
+  .navbar-nav > li,
+  .navbar-nav > li > a {
+    background: transparent !important;
+  }
+  .navbar-nav.navbar-right {
+    margin-left: auto;                  /* 把右侧菜单推到最右 */
+  }
+  /* 由于上面将 .navbar-nav 的 margin 统一清零，这里在更靠后的位置重新为右侧导航设置左侧自动外边距，以便靠右 */
+  .nav.navbar-nav.nav-right {
+    margin-left: auto !important;
+  }
+  /* 移除默认背景，但保留悬停与选中效果由下方规则控制 */
+  .navbar-default .navbar-nav>li>a {
+    background: transparent !important;
+    color: #4f5a6d !important; /* 提高优先级，确保默认文字色生效 */
+  }
+  /* collapse 的样式不再参与布局 */
+  .navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 3px; /* 增加 logo 与 MetaServe 的水平间距 */
+    color: #1a1a1a !important;
+    font-weight: 700; /* 品牌整体略微减细 */
+    font-family: 'Inter', 'Noto Sans SC', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-decoration: none;
+    height: 72px;
+  }
+  .navbar-brand .brand-text {
+    font-size: 18px;
+    font-weight: 600; /* 品牌文字减细，避免过粗 */
+    font-family: 'Inter', 'Noto Sans SC', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #4a4a4a !important;
+    text-shadow: none !important;
+  }
+  .navbar-nav > li > a {
+    display: flex;
+    align-items: center;
+    height: 72px;
+    padding: 0 14px !important;
+    font-size: 14px;
+    font-weight: 400; /* 更饱满的粗细 */
+    font-family: 'Inter', 'Noto Sans SC', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* 统一字体族 */
+    color: #000000; /* 恢复为前端次要文字色 */
+    letter-spacing: -0.0145em; /* 略微收紧字间距 */
+  }
+  .navbar-nav > li > a:hover,
+  .navbar-nav > li > a:focus {
+    color: rgb(58, 126, 185) !important;
+    background-color: rgba(58, 126, 185, 0.08) !important;
+    text-decoration: none;
+  }
+  .navbar-nav > li.active > a,
+  .navbar-nav > li.active > a:hover,
+  .navbar-nav > li.active > a:focus {
+    color: rgb(58, 126, 185) !important;
+    background-color: rgba(58, 126, 185, 0.14) !important;
+    border-radius: 0;
+  }
+  @media (max-width: 767px) {
+    .navbar-collapse {
+      background: rgba(255, 255, 255, 0.95);
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+      margin-top: 10px;
+      padding-top: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .navbar-brand .brand-text { font-size: 16px; }
+    .navbar-nav > li > a {
+      padding: 12px 15px !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    .navbar-nav > li:last-child > a { border-bottom: none; }
+  }
+  @media (min-width: 768px) and (max-width: 991px) {
+    .navbar-brand .brand-text { font-size: 17px; }
+    .navbar-nav > li > a { padding: 15px 12px; }
+  }
+</style>
 </head>
 
 <body>
  <!-- Page content of course! -->
+<nav class="navbar navbar-default waves-transparent" role="navigation">
+  <div class="container-fluid nav-flex">
+    <div class="nav-left">
+      <a class="navbar-brand" href="/">
+        <img src="/api/auth/logo.png" alt="MetaServe Logo" id="navbar-logo" style="height:32px;width:auto;margin-right:10px;margin-top:-2px;"
+             onerror="this.onerror=null;this.src='/api/auth/logo.png'"/>
+        <span class="brand-text">MetaServe</span>
+      </a>
+    </div>
+    <ul class="nav navbar-nav nav-right">
+      <li class="{% if request.path == '/' or 'home' in request.path %}active{% endif %}"><a href="/">Home</a></li>
+      <li class="{% if 'files' in request.path %}active{% endif %}"><a href="/files">Files</a></li>
+      <li class="{% if 'download' in request.path %}active{% endif %}"><a href="/download">Download</a></li>
+      <li class="{% if 'search' in request.path %}active{% endif %}"><a href="/search">Search Files</a></li>
+      <li class="{% if 'cellxgene-app' in request.path %}active{% endif %}"><a href="/cellxgene-app">Cell Visualization</a></li>
+      {% if request.user.is_superuser %}
+      <li class="{% if 'orgs/ui' in request.path %}active{% endif %}"><a href="/api/auth/orgs/ui/">management</a></li>
+      {% endif %}
+      <li class="{% if 'profile' in request.path %}active{% endif %}"><a href="/profile">Profile</a></li>
+      <li><a href="/api/auth/ui/logout/">Logout</a></li>
+    </ul>
+  </div>
+</nav>
+
 <main class="container-fluid">
 <div class="container">
+
+ {% if messages %}
+  <div style="margin-top:10px;">
+    {% for message in messages %}
+      {% if message.tags == 'error' %}
+        <div class="alert alert-danger" role="alert">{{ message }}</div>
+      {% elif message.tags == 'success' %}
+        <div class="alert alert-success" role="alert">{{ message }}</div>
+      {% elif message.tags == 'warning' %}
+        <div class="alert alert-warning" role="alert">{{ message }}</div>
+      {% else %}
+        <div class="alert alert-info" role="alert">{{ message }}</div>
+      {% endif %}
+    {% endfor %}
+  </div>
+ {% endif %}
 
  {% block content %} {% endblock %}
 

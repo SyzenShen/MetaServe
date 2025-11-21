@@ -3,19 +3,19 @@
     <div class="container-fluid">
       <div class="navbar-header">
         <router-link to="/" class="navbar-brand">
-          <img :src="logoUrl" alt="WAVES Logo" id="navbar-logo" />
-          <span class="brand-text">BioFileManager</span>
+          <img :src="logoSrc" alt="WAVES Logo" id="navbar-logo" @error="handleLogoError" />
+          <span class="brand-text">MetaServe</span>
         </router-link>
       </div>
       
       <div class="navbar-collapse collapse in">
         <ul class="nav navbar-nav navbar-right">
-          <!-- 主要导航项 -->
-          <li :class="{ active: $route.path === '/' }">
-            <router-link to="/">Home</router-link>
-          </li>
+          <!-- 主要导航项（移除 Home 链接） -->
           
           <template v-if="isAuthenticated">
+            <li :class="{ active: $route.path === '/' }">
+              <router-link to="/">Home</router-link>
+            </li>
             <li :class="{ active: $route.path === '/files' }">
               <router-link to="/files">Files</router-link>
             </li>
@@ -29,17 +29,19 @@
             <li :class="{ active: $route.path === '/cellxgene-app' }">
               <router-link :to="cellxgeneRoute">Cell Visualization</router-link>
             </li>
+            <!-- 组织管理入口：仅超级用户显示，移动到 Cell Visualization 右侧 -->
+            <li v-if="isSuperuser">
+              <a href="/api/auth/orgs/ui/">management</a>
+            </li>
             <li :class="{ active: $route.path === '/profile' }">
               <router-link to="/profile">Profile</router-link>
             </li>
           </template>
 
           
-          <!-- 用户相关项 -->
+          <!-- 用户相关项（未登录时移除 Login 链接） -->
           <template v-if="!isAuthenticated">
-            <li :class="{ active: $route.path === '/login' }">
-              <router-link to="/login">Login</router-link>
-            </li>
+            <!-- Login link removed -->
           </template>
           
           <template v-if="isAuthenticated">
@@ -54,11 +56,11 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useFilesStore } from '../stores/files'
-import logoUrl from '../assets/images/logo.png'
+import assetLogo from '../assets/images/logo.png'
 
 export default {
   name: 'Navbar',
@@ -69,6 +71,7 @@ export default {
     const filesStore = useFilesStore()
     const isAuthenticated = computed(() => authStore.isAuthenticated)
     const currentUser = computed(() => authStore.currentUser)
+    const isSuperuser = computed(() => !!authStore.currentUser?.is_superuser)
     const cellxgeneRoute = computed(() => {
       const lastFile = filesStore.lastPublishedCellxgeneFile
       return lastFile
@@ -82,13 +85,17 @@ export default {
     }
 
     // Use dedicated /download page instead of global NCBI dialog
+    const logoSrc = ref('/api/auth/logo.png')
+    const handleLogoError = () => { logoSrc.value = assetLogo }
     
     return {
       isAuthenticated,
       currentUser,
+      isSuperuser,
       cellxgeneRoute,
       handleLogout,
-      logoUrl
+      logoSrc,
+      handleLogoError
     }
   }
 }
@@ -118,7 +125,7 @@ export default {
   display: flex;
   align-items: center;
   color: var(--waves-corporate-text) !important;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
   height: 72px;
 }
@@ -137,7 +144,7 @@ export default {
 
 .navbar-brand .brand-text {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   color: #4a4a4a !important;
   text-shadow: none !important;
 }

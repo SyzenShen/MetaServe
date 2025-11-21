@@ -1,0 +1,61 @@
+{% extends "file_upload/base.html" %}
+
+{% block title %}创建文件共享{% endblock %}
+
+{% block content %}
+<h3>创建文件共享</h3>
+
+<form action="" method="post" class="form">
+  {% csrf_token %}
+  <div class="form-group">
+    <label>选择文件</label>
+    <select name="file_id" class="form-control" required>
+      <option value="">-- 选择文件 --</option>
+      {% for f in my_files %}
+        <option value="{{ f.id }}">{{ f.original_filename|default:f.file.name }} ({{ f.uploaded_at|date:"Y-m-d" }})</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>共享到用户（可选）</label>
+    <select name="user_id" class="form-control">
+      <option value="">-- 不选择 --</option>
+      {% for u in users %}
+        <option value="{{ u.id }}">{{ u.email }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>共享到组织（可选）</label>
+    <select name="organization_id" class="form-control">
+      <option value="">-- 不选择 --</option>
+      {% for o in my_orgs %}
+        <option value="{{ o.id }}">{{ o.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="checkbox">
+    <label>
+      <input type="checkbox" name="can_download" checked> 允许下载
+    </label>
+  </div>
+
+  <div class="checkbox">
+    <label>
+      <input type="checkbox" name="can_edit_metadata"> 允许编辑元数据
+    </label>
+  </div>
+
+  <div class="form-group">
+    <label>到期时间（ISO8601，可选）</label>
+    <input type="text" name="expires_at" class="form-control" placeholder="例如：2025-12-31T23:59:00">
+  </div>
+
+  <button class="btn btn-primary" type="submit">创建共享</button>
+  <a class="btn btn-default" href="{% url 'file_upload:share_list_page' %}">返回列表</a>
+</form>
+
+{% endblock %}

@@ -245,8 +245,8 @@ export default {
         await filesStore.fetchFiles(currentFolderId.value)
         emit('close')
       } catch (error) {
-        console.error('上传失败:', error)
-        alert('上传失败: ' + error.message)
+        console.error('Upload failed:', error)
+        alert('Upload failed: ' + error.message)
       } finally {
         uploading.value = false
         uploadProgress.value = 0

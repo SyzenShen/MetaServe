@@ -13,7 +13,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // 后端开发服务器运行在 8020 端口，开发环境通过代理转发到后端
+        target: 'http://localhost:8020',
         changeOrigin: true,
         // 保留 /api 前缀，后端以 /api 开头
         secure: false

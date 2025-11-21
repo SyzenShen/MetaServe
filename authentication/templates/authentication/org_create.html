@@ -1,0 +1,18 @@
+{% extends "file_upload/base.html" %}
+
+{% block title %}Create Organization{% endblock %}
+
+{% block content %}
+<h3>Create Organization</h3>
+
+<form action="" method="post" class="form">
+  {% csrf_token %}
+  <div class="form-group">
+    <label>Organization Name</label>
+    <input type="text" name="name" class="form-control" required>
+  </div>
+  <button class="btn btn-primary" type="submit">Create</button>
+  <a class="btn btn-default" href="{% url 'org_list_page' %}">Back</a>
+</form>
+
+{% endblock %}

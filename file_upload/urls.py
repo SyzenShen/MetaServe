@@ -1,5 +1,6 @@
 from django.urls import re_path, path
 from . import views
+from . import ui_views
 
 # namespace
 app_name = "file_upload"
@@ -20,5 +21,9 @@ urlpatterns = [
 
     # View File List
     path('', views.file_list, name='file_list'),
+
+    # UI: 文件共享管理
+    path('shares/', ui_views.share_list_page, name='share_list_page'),
+    path('shares/create/', ui_views.share_create_page, name='share_create_page'),
 
 ]

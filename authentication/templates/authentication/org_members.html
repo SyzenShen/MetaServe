@@ -1,0 +1,84 @@
+{% extends "file_upload/base.html" %}
+
+{% block title %}Member Management{% endblock %}
+
+{% block content %}
+<h3>Organization: {{ org.name }}</h3>
+<p>
+  <a class="btn btn-default" href="{% url 'org_list_page' %}">Back to Organization List</a>
+</p>
+
+<h4>Members</h4>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Email</th>
+      <th>Role</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in members %}
+    <tr>
+      <td>{{ m.user.email }}</td>
+      <td>{{ m.role }}</td>
+      <td>
+        {% if me.role in 'owner,admin' %}
+        <form action="" method="post" style="display:inline-block;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="member_id" value="{{ m.id }}">
+          <select name="role" class="form-control" style="width:140px; display:inline-block;">
+            <option value="owner" {% if m.role == 'owner' %}selected{% endif %}>Owner</option>
+            <option value="admin" {% if m.role == 'admin' %}selected{% endif %}>Admin</option>
+            <option value="member" {% if m.role == 'member' %}selected{% endif %}>Member</option>
+            <option value="viewer" {% if m.role == 'viewer' %}selected{% endif %}>Viewer</option>
+          </select>
+          <button class="btn btn-primary btn-sm" type="submit">Update Role</button>
+        </form>
+        <form action="" method="post" style="display:inline-block; margin-left:8px;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="remove">
+          <input type="hidden" name="member_id" value="{{ m.id }}">
+          <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h4>Add Member</h4>
+{% if me.role in 'owner,admin' %}
+<form action="" method="post" class="form-inline">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="add">
+  <div class="form-group">
+    <label>User</label>
+    <select name="user_id" class="form-control" style="min-width:220px;">
+      {% for u in all_users %}
+        <option value="{{ u.id }}">{{ u.email }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-group" style="margin-left:8px;">
+    <label>Role</label>
+    <select name="role" class="form-control">
+      <option value="member">Member</option>
+      <option value="viewer">Viewer</option>
+      <option value="admin">Admin</option>
+      <option value="owner">Owner</option>
+    </select>
+  </div>
+  <div class="form-group" style="margin-left:8px;">
+    <label>Or Invite by Email</label>
+    <input type="email" name="email" class="form-control" placeholder="user@example.com" style="min-width:240px;" />
+  </div>
+  <button class="btn btn-primary" type="submit" style="margin-left:8px;">Add</button>
+</form>
+{% else %}
+<p class="text-muted">Only Owner or Admin can add/update/remove members.</p>
+{% endif %}
+
+{% endblock %}

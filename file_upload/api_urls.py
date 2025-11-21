@@ -6,6 +6,9 @@ from . import search_views
 urlpatterns = [
     # 文件相关API
     path('', api_views.file_list, name='api_file_list'),
+    # 新增共享/组织列表
+    path('shared-to-me/', api_views.file_list_shared_to_me, name='api_file_list_shared_to_me'),
+    path('org-internal/', api_views.file_list_org_internal, name='api_file_list_org_internal'),
     path('upload/', api_views.file_upload, name='api_file_upload'),
     path('ncbi/import/', api_views.ncbi_import, name='api_file_ncbi_import'),
     path('<int:file_id>/delete/', api_views.file_delete, name='api_file_delete'),
@@ -33,4 +36,9 @@ urlpatterns = [
     path('chunked/<str:session_id>/chunk/', chunk_api.chunked_upload_chunk, name='api_chunked_upload_chunk'),
     path('chunked/<str:session_id>/complete/', chunk_api.chunked_upload_complete, name='api_chunked_upload_complete'),
     path('chunked/<str:session_id>/cancel/', chunk_api.chunked_upload_cancel, name='api_chunked_upload_cancel'),
+    
+    # 文件共享管理
+    path('shares/create/', api_views.file_share_create, name='api_file_share_create'),
+    path('shares/', api_views.file_share_list, name='api_file_share_list'),
+    path('shares/<int:share_id>/delete/', api_views.file_share_delete, name='api_file_share_delete'),
 ]

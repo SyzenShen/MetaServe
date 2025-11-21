@@ -93,8 +93,11 @@ export const useAuthStore = defineStore('auth', {
         this.user = response.data
       } catch (error) {
         console.error('Fetch user error:', error)
-        // 不强制登出，保留 token，方便用户重试或手动刷新
-        delete axios.defaults.headers.common['Authorization']
+        // 不强制登出，保留 token，并继续携带认证头，避免影响后续接口调用
+        // 如果确实是 401，可提示用户重新登录，但不移除 header
+        if (error?.response?.status === 401) {
+          this.error = '登录状态已过期，请重新登录'
+        }
       }
     },
 

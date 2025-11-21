@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.utils import timezone
 
 
 class CustomUserManager(BaseUserManager):
@@ -52,3 +53,40 @@ class CustomUser(AbstractUser):
     
     def __str__(self):
         return self.email
+
+
+class Organization(models.Model):
+    """组织模型，用于用户层级与内部权限判定"""
+    name = models.CharField(max_length=255, unique=True, verbose_name='组织名称')
+    owner = models.ForeignKey('authentication.CustomUser', on_delete=models.CASCADE, related_name='owned_organizations')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = '组织'
+        verbose_name_plural = '组织'
+
+    def __str__(self):
+        return self.name
+
+
+class Membership(models.Model):
+    """组织成员关系，带角色"""
+    ROLE_CHOICES = [
+        ('owner', 'Owner'),
+        ('admin', 'Admin'),
+        ('member', 'Member'),
+        ('viewer', 'Viewer'),
+    ]
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='memberships')
+    user = models.ForeignKey('authentication.CustomUser', on_delete=models.CASCADE, related_name='memberships')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    joined_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('organization', 'user')
+        verbose_name = '组织成员'
+        verbose_name_plural = '组织成员'
+
+    def __str__(self):
+        return f"{self.organization.name} - {self.user.email} ({self.role})"

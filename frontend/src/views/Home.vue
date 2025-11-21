@@ -1,34 +1,37 @@
 <template>
   <div class="waves-corporate-bg home-bleed">
     <div class="page-center container">
-      <div class="card page-card hero-card waves-well">
-        <div class="card-header" style="text-align: center;">
-          <h1 class="card-title title-stable waves-text-corporate hero-title">BioFileManager</h1>
-          <p class="waves-text-light hero-subtitle">Upload, organize and manage your files with ease</p>
-        </div>
-        <div class="card-body">
-        
-        
-        <div v-if="!isAuthenticated" class="welcome-section">
-          <h3 class="waves-text-corporate section-title">Get Started</h3>
-          <div class="action-buttons">
-            <router-link to="/login" class="btn btn-primary waves-btn">Sign In</router-link>
-            <router-link to="/register" class="btn btn-secondary waves-btn">Create Account</router-link>
-          </div>
+      <section v-if="!isAuthenticated" class="portal-unauth">
+        <img src="./logo.png" alt="MetaServe Logo" class="portal-logo" />
+        <h1 class="portal-title">MetaServe</h1>
+        <p class="portal-subtitle">Simple. Secure. Smart.</p>
+  <div class="portal-actions">
+    <router-link to="/login" class="portal-link portal-link--signin">
+      <span>Sign In</span>
+    </router-link>
+    <span class="portal-hint">
+      <span>No account?</span>
+      <router-link to="/register" class="portal-link portal-link--register"><span>Create one</span></router-link>
+    </span>
+  </div>
+      </section>
 
+      <div v-else class="card page-card hero-card waves-well">
+        <div class="card-body">
+        <div class="insight-card headline-card">
+          <div class="headline-content">
+            <img src="./logo.png" alt="MetaServe Logo" class="hero-logo" />
+            <h1 class="card-title title-stable waves-text-corporate hero-title">MetaServe</h1>
+            
+            <h3 v-if="isAuthenticated" class="headline-welcome waves-text-corporate">Welcome back, {{ currentUser?.username || 'User' }}!</h3>
+          </div>
+          <div v-if="isAuthenticated" class="headline-actions">
+            <router-link to="/files" class="btn btn-primary waves-btn insight-btn">View My Files</router-link>
+          </div>
         </div>
         
-        <div v-else class="dashboard-section">
-          <h3 class="waves-text-corporate section-title">Welcome back, {{ currentUser?.username || 'User' }}!</h3>
+        <div class="dashboard-section">
           
-          <div class="action-buttons">
-            <router-link to="/files" class="btn btn-primary waves-btn">
-              View My Files
-            </router-link>
-            <router-link to="/search" class="btn btn-secondary waves-btn">
-              Search Files
-            </router-link>
-          </div>
           <div class="home-insights two-col" v-if="statsReady">
             <div class="insights-tiles">
               <div class="insight-card">
@@ -126,6 +129,80 @@ export default {
 
 </script>
 <style scoped>
+.portal-unauth {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 28px 20px;
+  margin-top: -36px; /* 再上移一点 */
+}
+.portal-title { font-size: 3.2rem; font-weight: 700; margin-bottom: 6px; color: #1a1a1a; text-shadow: 0 0 8px rgba(58, 126, 185, 0.15); }
+.portal-logo { width: 260px; height: auto; margin-bottom: 6px; display: inline-block; filter: drop-shadow(0 0 8px rgba(58, 126, 185, 0.25)); transition: filter 0.2s ease; }
+.portal-logo:hover { filter: drop-shadow(0 0 12px rgba(58, 126, 185, 0.35)); }
+.portal-subtitle { font-size: 1rem; margin-bottom: 24px; color: #666; text-shadow: 0 0 6px rgba(58, 126, 185, 0.12); }
+  .portal-actions { display: flex; flex-direction: column; gap: 24px; align-items: flex-start; justify-content: center; margin-top: 38px; text-align: left; }
+  /* 让 Sign In 居中 */
+  .portal-actions .portal-link--signin { align-self: center; }
+.portal-hint { color: #4a4a4a; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px; }
+.portal-secondary { color: rgb(58, 126, 185); text-decoration: none; font-weight: 600; }
+/* Make Sign In button text larger only on the unauthenticated view */
+.portal-actions .btn-primary.waves-btn { font-size: 1.2rem; }
+
+/* Text link style for Sign In / Create one */
+.portal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1a1a1a;
+  font-weight: 600;
+  text-decoration: none;
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.portal-icon svg { display: block; width: 14px; height: 14px; }
+
+/* Sign In 专属样式：加粗、稍大、居中、悬停下划线与轻微变色 */
+.portal-link--signin {
+  font-weight: 700;
+  font-size: 1.2rem;
+  align-self: center;
+  background: rgb(75, 126, 180); /* 深蓝 24 50 80 */
+  color: #ffffff; /* 文本改为黑色 */
+  border-radius: 4px;
+  padding: 16px 28px; /* 纵向稍增，按钮更大一点 */
+  border: 1px solid rgba(0, 0, 0, 0.15); /* 简洁描边 */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); /* 轻阴影，提升质感 */
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  border-bottom: none !important; /* 覆盖通用链接底线 */
+}
+.portal-link--signin:hover {
+  background: rgb(45, 102, 150); /* 与主按钮悬停一致 */
+  color: #fff !important; /* 悬停改为白字，提升对比 */
+  border-bottom-color: transparent !important; /* 不显示底部线 */
+  border-color: rgb(45, 102, 150); /* 与主按钮悬停一致 */
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12); /* 悬停阴影略增强 */
+}
+.portal-link:hover {
+  color: rgb(58, 126, 185);
+  border-bottom-color: rgb(58, 126, 185);
+}
+/* Register 悬停色与按钮保持一致 */
+.portal-link--register:hover {
+  color: rgb(45, 102, 150);
+  border-bottom-color: rgb(45, 102, 150);
+}
+/* Active state highlight for current page link */
+.portal-link.router-link-active,
+.portal-link.router-link-exact-active {
+  color: rgb(58, 126, 185);
+  border-bottom-color: rgb(58, 126, 185);
+}
+
 .waves-corporate-bg {
   /* Disable corporate banner image and overlay for Home */
   --waves-banner-image: none !important;
@@ -149,6 +226,21 @@ export default {
   background-clip: border-box;
 }
 
+/* Ensure container on Home page is not capped by global 1200px */
+:global(.page-center.container) {
+  max-width: 1060px !important;
+  width: 100%;
+  /* 减少首页的上页边距 */
+  padding-top: 16px !important;
+}
+
+/* 仅在首页提升选择器权重并统一容器内边距，确保上移有效 */
+.home-bleed .page-center.container {
+  /* 顶部改为 0；左右保持 20px；底部 24px */
+  padding: 0 20px 24px !important;
+  align-items: flex-start;
+}
+
 .home-container {
   min-height: 100vh;
   display: flex;
@@ -158,7 +250,7 @@ export default {
 }
 
 .hero-card {
-  max-width: 1100px;
+  max-width: 2000px !important;
   width: 100%;
   text-align: center;
   padding: 32px;
@@ -170,7 +262,7 @@ export default {
   backdrop-filter: none !important;
   border: none !important;
   box-shadow: none !important;
-  margin: 0 auto;
+  margin: -12px auto 0; /* 整体轻微上移 */
 }
 
 /* Plan A: make the hero container transparent and remove blur when using waves-well */
@@ -185,10 +277,12 @@ export default {
 .hero-title {
   font-size: 2.5rem;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
   color: #1a1a1a;
   line-height: 1.2;
 }
+
+.hero-logo { width: 80px; height: auto; margin-bottom: -8px; display: inline-block; }
 
 .hero-subtitle {
   font-size: 1.2rem;
@@ -286,11 +380,12 @@ export default {
 
 /* Home insights cards */
 .home-insights {
-  margin-top: 24px;
+  margin-top: 8px; /* 缩小标题与网格之间的距离 */
   display: grid;
   gap: 16px;
   width: 100%;
-  max-width: 1000px;
+  /* Widen to align with headline card width */
+  max-width: 2000px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -299,7 +394,7 @@ export default {
   grid-template-columns: 1fr 360px;
   align-items: start;
   justify-content: center;
-  gap: 24px;
+  gap: 16px; /* 统一列与行间距为 16px */
 }
 
 .insights-tiles {
@@ -308,16 +403,71 @@ export default {
   gap: 16px;
 }
 
-.insights-right { display: flex; }
-.pie-card { width: 100%; display: flex; justify-content: center; padding: 20px; }
+/* Center text within the statistic tiles */
+.insights-tiles .insight-card {
+  text-align: center;
+  padding-top: 47px; /* move value and texts down */
+}
+
+.insights-right {
+  display: flex;
+  /* Stretch to match the left tiles column height for alignment */
+  align-self: stretch;
+}
+.pie-card {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  /* Make the Storage Usage card taller to visually align with left cards */
+  height: 100%;
+  min-height: 420px;
+}
 .pie-card canvas { max-width: 100%; height: auto; }
 
 .insight-card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 22px 24px;
+  padding: 26px 28px;
   box-shadow: 0 12px 30px rgba(27, 44, 72, 0.08);
-  min-height: 180px;
+  min-height: 200px;
+}
+
+.headline-card {
+  /* Wider and aligned with the insights grid below */
+  max-width: 2000px !important;
+  width: 100%;
+  margin: 0 auto; /* 去除额外下边距，统一用行间距控制 */
+  padding: 40px 0; /* remove horizontal padding for alignment */
+  min-height: 200px;
+  text-align: left; /* override hero-card center */
+}
+.headline-card {
+  display: grid;
+  grid-template-columns: 1fr 360px; /* match insights grid right column */
+  align-items: center;
+  column-gap: 24px; /* match grid gap */
+}
+
+/* 统一页面主体内的上下块间距，确保各块等距 */
+.card.page-card.hero-card .card-body {
+  display: grid;
+  row-gap: 12px; /* 进一步压缩块与块之间的垂直间距 */
+}
+.headline-content { padding-left: 32px; }
+.headline-actions { display: flex; justify-content: flex-end; padding-right: 120px; }
+.headline-actions .insight-btn { padding: 8px 16px; }
+.headline-card .hero-title,
+.headline-card .hero-subtitle,
+.headline-card .headline-welcome {
+  text-align: left;
+  margin-left: 0;
+}
+.headline-card .hero-subtitle { margin-bottom: 0; }
+.headline-card .headline-welcome { margin-top: 0; }
+.headline-welcome {
+  margin-top: 8px;
 }
 
 .insight-value {
@@ -337,6 +487,9 @@ export default {
   line-height: 1.6;
   margin: 0;
 }
+
+.insight-actions { margin-top: 14px; }
+.insight-btn { min-width: auto; padding: 4px 14px; font-size: 0.9rem; }
 
 .features-preview h4 {
   font-size: 1.4rem;

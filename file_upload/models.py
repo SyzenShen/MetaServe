@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 import os
 import uuid
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -436,3 +437,31 @@ class UploadSession(models.Model):
 
     def __str__(self):
         return f"Session {self.session_id} ({self.original_filename}) - {self.status}"
+
+
+class FileShare(models.Model):
+    """文件共享记录：面向用户或组织的共享，支持到期与权限标记"""
+    file = models.ForeignKey('file_upload.File', on_delete=models.CASCADE, related_name='shares')
+    shared_to_user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='received_file_shares')
+    # 组织共享需要依赖 authentication.Organization
+    # 使用字符串 app_label.ModelName 以避免循环导入
+    shared_to_organization = models.ForeignKey('authentication.Organization', on_delete=models.CASCADE, null=True, blank=True, related_name='organization_file_shares')
+    can_download = models.BooleanField(default=True)
+    can_edit_metadata = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = '文件共享'
+        verbose_name_plural = '文件共享'
+
+    def is_active(self):
+        if self.expires_at is None:
+            return True
+        return timezone.now() < self.expires_at
+
+    def __str__(self):
+        target = self.shared_to_user.email if self.shared_to_user else (
+            self.shared_to_organization.name if self.shared_to_organization else 'N/A'
+        )
+        return f"Share({self.file_id}) -> {target}"

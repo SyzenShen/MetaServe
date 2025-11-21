@@ -1,6 +1,6 @@
 # Storage Stress Report
 
-> **Objective:** Estimate the storage saturation point of BioFileManager by progressively uploading synthetic payloads, observe API responsiveness, and capture failure signatures as available capacity diminishes.
+> **Objective:** Estimate the storage saturation point of MetaServe by progressively uploading synthetic payloads, observe API responsiveness, and capture failure signatures as available capacity diminishes.
 
 ## Test Metadata
 

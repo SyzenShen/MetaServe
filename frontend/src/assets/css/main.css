@@ -212,9 +212,7 @@ input[readonly] {
 }
 
 #navbar-logo {
-    box-shadow: 2px 2px 5px #888888;
     width: 50px;
-
 }
 
 @media (min-width: 768px) {

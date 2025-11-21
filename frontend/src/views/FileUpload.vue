@@ -9,8 +9,8 @@
     <div class="upload-container">
       <!-- 头部区域 -->
       <div class="upload-header">
-        <h1 class="upload-title waves-text-corporate">文件上传中心</h1>
-        <p class="upload-subtitle waves-text-light">安全、快速、可靠的企业级文件上传服务</p>
+        <h1 class="upload-title waves-text-corporate">File Upload Center</h1>
+        <p class="upload-subtitle waves-text-light">Secure, fast, and reliable enterprise file uploads</p>
       </div>
 
       <!-- 主要内容区域 -->
@@ -27,28 +27,28 @@
           <!-- 文件选择状态 -->
           <div v-if="!selectedFile" class="upload-placeholder">
             <i class="fas fa-cloud-upload-alt fa-4x waves-upload-icon"></i>
-            <h3 class="upload-zone-title waves-text-corporate">拖拽文件到此处或点击选择</h3>
-            <p class="upload-zone-subtitle waves-text-light">支持多种文件格式，单个文件最大 100GB</p>
+            <h3 class="upload-zone-title waves-text-corporate">Drag files here or click to select</h3>
+            <p class="upload-zone-subtitle waves-text-light">Supports multiple formats; single file up to 100GB</p>
             
             <!-- 功能标签 -->
             <div class="upload-features">
               <div class="feature-tag">
                 <i class="fas fa-shield-alt feature-icon"></i>
-                <span>安全加密</span>
+                <span>Secure Encryption</span>
               </div>
               <div class="feature-tag">
                 <i class="fas fa-bolt feature-icon"></i>
-                <span>快速上传</span>
+                <span>Fast Upload</span>
               </div>
               <div class="feature-tag">
                 <i class="fas fa-chart-line feature-icon"></i>
-                <span>实时进度</span>
+                <span>Real-time Progress</span>
               </div>
             </div>
 
             <button class="waves-btn btn-primary" @click.stop="triggerFileInput">
               <i class="fas fa-folder-open"></i>
-              选择文件
+              Select Files
             </button>
           </div>
 
@@ -65,7 +65,7 @@
                 <h4 class="file-name waves-text-corporate">{{ selectedFile.name }}</h4>
                 <p class="file-size waves-text-light">{{ formatFileSize(selectedFile.size) }}</p>
                 <div class="file-status">
-                  <span class="status-badge ready">准备上传</span>
+                  <span class="status-badge ready">Ready to Upload</span>
                 </div>
               </div>
             </div>
@@ -73,7 +73,7 @@
             <div class="upload-actions">
               <button class="waves-btn btn-secondary" @click.stop="triggerFileInput">
                 <i class="fas fa-exchange-alt"></i>
-                重新选择
+                Re-select
               </button>
               <button 
                 class="waves-btn btn-success" 
@@ -82,7 +82,7 @@
               >
                 <i v-if="isUploading" class="waves-loading-spinner"></i>
                 <i v-else class="fas fa-upload"></i>
-                {{ isUploading ? '上传中...' : '开始上传' }}
+                {{ isUploading ? 'Uploading...' : 'Start Upload' }}
               </button>
               <button 
                 v-if="isUploading && !isPaused" 
@@ -90,7 +90,7 @@
                 @click.stop="pauseUpload"
               >
                 <i class="fas fa-pause"></i>
-                暂停
+                Pause
               </button>
               <button 
                 v-if="isUploading && isPaused" 
@@ -98,7 +98,7 @@
                 @click.stop="resumeUpload"
               >
                 <i class="fas fa-play"></i>
-                继续
+                Resume
               </button>
               <button 
                 v-if="isUploading" 
@@ -106,7 +106,7 @@
                 @click.stop="cancelUpload"
               >
                 <i class="fas fa-times"></i>
-                取消
+                Cancel
               </button>
             </div>
           </div>
@@ -148,11 +148,11 @@
           </div>
         </div>
 
-        <!-- 最近上传文件 -->
+        <!-- Recent uploads -->
         <div class="waves-recent-section">
           <h3 class="recent-title">
             <i class="fas fa-history recent-icon"></i>
-            最近上传
+            Recent Uploads
           </h3>
           <div class="recent-files">
             <div 
@@ -170,7 +170,7 @@
                 </div>
               </div>
               <div class="recent-file-actions">
-                <button class="action-btn" @click.stop="downloadFile(file)" title="下载">
+                <button class="action-btn" @click.stop="downloadFile(file)" title="Download">
                   <i class="fas fa-download"></i>
                 </button>
               </div>
@@ -325,7 +325,7 @@ export default {
     }
     
     const formatDate = (date) => {
-      return date.toLocaleDateString('zh-CN', {
+      return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -333,8 +333,8 @@ export default {
     }
     
     const viewFile = (file) => {
-      // 查看文件详情
-      console.log('查看文件:', file)
+      // View file detail
+      console.log('View file:', file)
     }
     
     const downloadFile = async (file) => {
@@ -344,14 +344,13 @@ export default {
           file.original_filename || `file_${file.id}`, 
           file.file_size
         )
-        // 错误处理已在store中完成，这里不需要额外处理
+        // Error is handled in store; optional success handling here
         if (result.success) {
-          // 可以在这里添加下载成功的处理逻辑
-          console.log('下载开始:', file.original_filename)
+          console.log('Download started:', file.original_filename)
         }
       } catch (error) {
-        console.error('下载失败:', error)
-        filesStore.showErrorNotification(`下载失败: ${error.message}`)
+        console.error('Download failed:', error)
+        filesStore.showErrorNotification(`Download failed: ${error.message}`)
       }
     }
     

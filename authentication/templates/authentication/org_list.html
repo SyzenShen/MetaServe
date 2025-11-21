@@ -1,0 +1,41 @@
+{% extends "file_upload/base.html" %}
+
+{% block title %}Organization Management{% endblock %}
+
+{% block content %}
+<h3>My Organizations</h3>
+<p>
+  <a class="btn btn-primary" href="{% url 'org_create_page' %}">Create Organization</a>
+</p>
+
+{% if orgs %}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for o in orgs %}
+    <tr>
+      <td>{{ o.name }}</td>
+      <td>
+        <a class="btn btn-default btn-sm" href="{% url 'org_members_page' o.id %}">Manage Members</a>
+        {% if o.my_role == 'owner' %}
+        <form action="" method="post" style="display:inline-block; margin-left:8px;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="org_id" value="{{ o.id }}">
+          <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Are you sure to delete this organization? This action cannot be undone.')">Delete Organization</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No organizations yet.</p>
+{% endif %}
+{% endblock %}

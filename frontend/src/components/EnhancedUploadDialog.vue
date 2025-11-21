@@ -88,34 +88,34 @@
                 <h4>Required Information</h4>
                 
                 <div class="form-group">
-                  <label for="title">文件标题 *</label>
+                  <label for="title">Title *</label>
                   <input
                     id="title"
                     v-model="metadata.title"
                     type="text"
-                    placeholder="请输入文件的描述性标题"
+                    placeholder="Enter a descriptive file title"
                     required
                   />
-                  <small>例如: 人类基因组RNA-seq数据分析结果</small>
+                  <small>Example: Human genome RNA-seq analysis results</small>
                 </div>
                 
                 <div class="form-group">
-                  <label for="project">项目名称 *</label>
+                  <label for="project">Project Name *</label>
                   <input
                     id="project"
                     v-model="metadata.project"
                     type="text"
-                    placeholder="项目名或课题号"
+                    placeholder="Project name or grant ID"
                     required
                   />
-                  <small>例如: MyLab-2024-001 或 癌症基因组学研究</small>
+                  <small>Example: MyLab-2024-001 or Cancer Genomics Study</small>
                 </div>
                 
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="document_type">文档类型 *</label>
+                    <label for="document_type">Document Type *</label>
                     <select id="document_type" v-model="metadata.document_type" required>
-                      <option value="">请选择</option>
+                      <option value="">Select</option>
                       <option value="Paper">Paper</option>
                       <option value="Protocol">Protocol</option>
                       <option value="Dataset">Dataset</option>
@@ -124,28 +124,50 @@
                   </div>
                   
                   <div class="form-group">
-                    <label for="access_level">访问级别 *</label>
+                    <label for="access_level">Access Level *</label>
                     <select id="access_level" v-model="metadata.access_level" required>
-                      <option value="">请选择</option>
-                      <option value="Public">Public</option>
+                      <option value="">Select</option>
+                      <option value="Public" :disabled="!canSetPublic">Public</option>
                       <option value="Internal">Internal</option>
-                      <option value="Restricted">Restricted</option>
+                      <option value="Restricted" :disabled="!canSetRestricted">Restricted</option>
                     </select>
+                    <small v-if="!canSetRestricted">Only owner/admin can select Restricted; create an organization or ask an admin.</small>
+                  </div>
+                </div>
+
+                <div class="form-row" v-if="metadata.access_level === 'Restricted'">
+                  <div class="form-group">
+                    <label for="organization">Share to Organization</label>
+                    <select id="organization" v-model="selectedOrganizationId" :disabled="filteredOrganizations.length === 0">
+                      <option value="">Select an organization</option>
+                      <option v-for="org in filteredOrganizations" :key="org.id" :value="org.id">
+                        {{ org.name }}
+                      </option>
+                    </select>
+                    <small v-if="filteredOrganizations.length === 0">
+                      No organizations found. Create or join one, or contact an admin.
+                      <a href="/api/auth/orgs/ui/" target="_blank">Go to Organization Management</a>
+                    </small>
+                    <div v-if="organizations.length === 0" class="inline-create-org" style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+                      <input v-model="newOrgName" type="text" placeholder="Enter organization name" style="flex:1;" />
+                      <button type="button" @click="createOrganization" class="btn btn-default btn-sm">Create Organization</button>
+                    </div>
+                    <small v-else>Restricted files require selecting a visible organization or setting it later on the share page.</small>
                   </div>
                 </div>
               </div>
 
               <!-- 可选字段 -->
               <div class="form-section">
-                <h4>实验信息 (可选)</h4>
+                <h4>Experiment Info (Optional)</h4>
                 
                 <div class="form-group">
-                  <label for="organism">物种</label>
+                  <label for="organism">Organism</label>
                   <input
                     id="organism"
                     v-model="metadata.organism"
                     type="text"
-                    placeholder="例如: Homo sapiens, Mus musculus"
+                    placeholder="e.g., Homo sapiens, Mus musculus"
                     list="organism-suggestions"
                   />
                   <datalist id="organism-suggestions">
@@ -157,41 +179,41 @@
                     <option value="Escherichia coli">Escherichia coli</option>
                     <option value="Arabidopsis thaliana">Arabidopsis thaliana</option>
                   </datalist>
-                  <small>支持NCBI标准物种名称</small>
+                  <small>Supports NCBI standard organism names</small>
                 </div>
                 
                 <div class="form-group">
-                  <label for="experiment_type">实验类型</label>
+                  <label for="experiment_type">Experiment Type</label>
                   <select id="experiment_type" v-model="metadata.experiment_type">
-                    <option value="">请选择</option>
+                    <option value="">Select</option>
                     <option value="RNA-seq">RNA-seq</option>
                     <option value="WGS">Whole Genome Sequencing</option>
                     <option value="scRNA-seq">Single Cell RNA-seq</option>
                     <option value="MS">Mass Spectrometry</option>
                     <option value="ChIP-seq">ChIP-seq</option>
                     <option value="ATAC-seq">ATAC-seq</option>
-                    <option value="other">其他</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
                 
                 <div class="form-group">
-                  <label for="tags">标签</label>
+                  <label for="tags">Tags</label>
                   <input
                     id="tags"
                     v-model="metadata.tags"
                     type="text"
-                    placeholder="用逗号分隔，例如: 癌症,基因组学,生物信息学"
+                    placeholder="Comma-separated, e.g., Cancer, Genomics, Bioinformatics"
                   />
-                  <small>用逗号分隔多个标签</small>
+                  <small>Separate tags with commas</small>
                 </div>
                 
                 <div class="form-group">
-                  <label for="description">描述</label>
+                  <label for="description">Description</label>
                   <textarea
                     id="description"
                     v-model="metadata.description"
                     rows="3"
-                    placeholder="详细描述文件内容、实验条件、数据来源等"
+                    placeholder="Describe file content, experimental conditions, data sources, etc."
                   ></textarea>
                 </div>
               </div>
@@ -199,13 +221,13 @@
 
             <!-- 自动检测的信息 -->
             <div v-if="detectedInfo.length > 0" class="detected-info">
-              <h4>自动检测信息</h4>
+              <h4>Auto-detected Info</h4>
               <div class="detected-items">
                 <div v-for="info in detectedInfo" :key="info.file" class="detected-item">
                   <strong>{{ info.file }}:</strong>
-                  <span>格式: {{ info.format }}</span>
-                  <span v-if="info.organism">物种: {{ info.organism }}</span>
-                  <span v-if="info.keywords">关键词: {{ info.keywords.join(', ') }}</span>
+                  <span>Format: {{ info.format }}</span>
+                  <span v-if="info.organism">Organism: {{ info.organism }}</span>
+                  <span v-if="info.keywords">Keywords: {{ info.keywords.join(', ') }}</span>
                 </div>
               </div>
             </div>
@@ -215,11 +237,11 @@
         <!-- 步骤3: 确认上传 -->
         <div v-if="currentStep === 3" class="step-content">
           <div class="upload-summary">
-            <h3>上传确认</h3>
+            <h3>Upload Confirmation</h3>
             
             <!-- 文件信息摘要 -->
             <div class="summary-section">
-              <h4>文件列表</h4>
+              <h4>File List</h4>
               <div class="summary-files">
                 <div v-for="file in selectedFiles" :key="file.name" class="summary-file">
                   <span class="file-icon">{{ getFileIcon(file.name) }}</span>
@@ -231,38 +253,38 @@
             
             <!-- 元数据摘要 -->
             <div class="summary-section">
-              <h4>文件信息</h4>
+              <h4>File Information</h4>
               <div class="summary-metadata">
                 <div class="metadata-item">
-                  <label>标题:</label>
+                  <label>Title:</label>
                   <span>{{ metadata.title }}</span>
                 </div>
                 <div class="metadata-item">
-                  <label>项目:</label>
+                  <label>Project:</label>
                   <span>{{ metadata.project }}</span>
                 </div>
                 <div class="metadata-item">
-                  <label>文档类型:</label>
+                  <label>Document Type:</label>
                   <span>{{ metadata.document_type }}</span>
                 </div>
                 <div class="metadata-item">
-                  <label>访问级别:</label>
+                  <label>Access Level:</label>
                   <span>{{ metadata.access_level }}</span>
                 </div>
                 <div v-if="metadata.organism" class="metadata-item">
-                  <label>物种:</label>
+                  <label>Organism:</label>
                   <span>{{ metadata.organism }}</span>
                 </div>
                 <div v-if="metadata.experiment_type" class="metadata-item">
-                  <label>实验类型:</label>
+                  <label>Experiment Type:</label>
                   <span>{{ metadata.experiment_type }}</span>
                 </div>
                 <div v-if="metadata.tags" class="metadata-item">
-                  <label>标签:</label>
+                  <label>Tags:</label>
                   <span>{{ metadata.tags }}</span>
                 </div>
                 <div v-if="metadata.description" class="metadata-item">
-                  <label>描述:</label>
+                  <label>Description:</label>
                   <span>{{ metadata.description }}</span>
                 </div>
               </div>
@@ -271,14 +293,14 @@
             <!-- 上传进度 -->
             <div v-if="uploading" class="upload-progress">
               <div class="progress-info">
-                <span>正在上传文件... ({{ currentFileIndex + 1 }}/{{ selectedFiles.length }})</span>
+                <span>Uploading files... ({{ currentFileIndex + 1 }}/{{ selectedFiles.length }})</span>
                 <span>{{ uploadProgress }}%</span>
               </div>
               <div class="progress-bar">
                 <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
               </div>
               <div class="current-file">
-                当前文件: {{ selectedFiles[currentFileIndex]?.name }}
+                Current file: {{ selectedFiles[currentFileIndex]?.name }}
               </div>
             </div>
           </div>
@@ -293,11 +315,11 @@
           class="btn btn-secondary"
           :disabled="uploading"
         >
-          上一步
+          Back
         </button>
         
         <button @click="$emit('close')" class="btn btn-secondary" :disabled="uploading">
-          取消
+          Cancel
         </button>
         
         <button 
@@ -306,7 +328,7 @@
           class="btn btn-primary"
           :disabled="!canProceed"
         >
-          下一步
+          Next
         </button>
         
         <button 
@@ -315,7 +337,7 @@
           class="btn btn-primary"
           :disabled="uploading || !canUpload"
         >
-          {{ uploading ? '上传中...' : '开始上传' }}
+          {{ uploading ? 'Uploading...' : 'Start Upload' }}
         </button>
       </div>
     </div>
@@ -323,7 +345,8 @@
 </template>
 
 <script>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import axios from 'axios'
 import { useFilesStore } from '../stores/files'
 
 export default {
@@ -344,13 +367,76 @@ export default {
     // 元数据表单
     const metadata = reactive({
       title: '',
-      project: '默认项目',
+      project: 'Default Project',
       document_type: 'Dataset',
       access_level: 'Internal',
       organism: '',
       experiment_type: '',
       tags: '',
       description: ''
+    })
+
+    // 组织可见性
+    const organizations = ref([])
+    const selectedOrganizationId = ref(null)
+    const newOrgName = ref('')
+    const filteredOrganizations = computed(() => {
+      // 仅允许 owner/admin 的组织用于上传共享
+      return (organizations.value || []).filter(o => o.role === 'owner' || o.role === 'admin')
+    })
+    const canSetPublic = computed(() => {
+      // 仅管理员允许设置 Public；后端仍会再校验
+      return window.__currentUser?.is_staff === true
+    })
+    const canSetRestricted = computed(() => {
+      // 用户在任一组织中拥有 owner/admin 角色时才允许 Restricted
+      return filteredOrganizations.value.length > 0
+    })
+    // 防御性处理：若无权限却选了 Restricted，自动回退为 Internal
+    watch(() => metadata.access_level, (lvl) => {
+      if (lvl === 'Restricted' && !canSetRestricted.value) {
+        metadata.access_level = 'Internal'
+      }
+    })
+
+    const fetchOrganizations = async () => {
+      try {
+        // 显式附加鉴权头，避免某些环境下axios默认头丢失导致401
+        const token = localStorage.getItem('token')
+        const headers = token ? { Authorization: `Token ${token}` } : {}
+        const res = await axios.get('/api/auth/orgs/', { headers })
+        organizations.value = res.data?.organizations || []
+      } catch (e) {
+        organizations.value = []
+        // Console tip for troubleshooting (not logged in/no members/network errors)
+        console.warn('Failed to fetch organizations:', e?.response?.status, e?.response?.data || e?.message)
+      }
+    }
+
+    const createOrganization = async () => {
+      const name = (newOrgName.value || '').trim()
+      if (!name) {
+        alert('Please enter an organization name')
+        return
+      }
+      try {
+        const token = localStorage.getItem('token')
+        const headers = token ? { Authorization: `Token ${token}` } : {}
+        const res = await axios.post('/api/auth/orgs/create/', { name }, { headers })
+        const created = res.data
+        // Add the new organization and select it (creator is owner)
+        organizations.value.push({ id: created.id, name: created.name, role: 'owner' })
+        selectedOrganizationId.value = created.id
+        newOrgName.value = ''
+        alert('Organization created successfully')
+      } catch (e) {
+        const msg = e?.response?.data?.detail || e?.response?.data?.message || e?.message
+        alert('Failed to create organization: ' + msg)
+      }
+    }
+
+    onMounted(() => {
+      fetchOrganizations()
     })
     
     // 自动检测信息
@@ -364,7 +450,12 @@ export default {
         return selectedFiles.value.length > 0
       }
       if (currentStep.value === 2) {
-        return metadata.title && metadata.project && metadata.document_type && metadata.access_level
+        const ok = metadata.title && metadata.project && metadata.document_type && metadata.access_level
+        if (!ok) return false
+        if (metadata.access_level === 'Restricted') {
+          return canSetRestricted.value && selectedOrganizationId.value !== null
+        }
+        return true
       }
       return true
     })
@@ -469,6 +560,10 @@ export default {
           })
           
           // 上传文件
+          // 传递受限组织可见性
+          if (metadata.access_level === 'Restricted' && selectedOrganizationId.value) {
+            fileMetadata.organization_id = selectedOrganizationId.value
+          }
           await filesStore.uploadFileWithMetadata(
             file,
             fileMetadata,
@@ -485,8 +580,8 @@ export default {
         emit('close')
         
       } catch (error) {
-        console.error('上传失败:', error)
-        alert('上传失败: ' + error.message)
+        console.error('Upload failed:', error)
+        alert('Upload failed: ' + error.message)
       } finally {
         uploading.value = false
         uploadProgress.value = 0
@@ -635,6 +730,14 @@ export default {
       detectedInfo,
       canProceed,
       canUpload,
+      organizations,
+      filteredOrganizations,
+      selectedOrganizationId,
+      newOrgName,
+      canSetPublic,
+      canSetRestricted,
+      createOrganization,
+      fetchOrganizations,
       selectFiles,
       handleFileSelect,
       handleDragOver,

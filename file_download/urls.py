@@ -1,4 +1,4 @@
-from django.urls import path, re_path
+from django.urls import path
 from . import views
 
 # namespace
@@ -12,7 +12,6 @@ urlpatterns = [
     # New: safer download via file ID with UTF-8 filename headers
     path('download/<int:file_id>/', views.file_download_by_id, name='file_download_by_id'),
 
-    # Legacy path download via file path (kept for compatibility, must be last)
-    re_path(r'^download/(?P<file_path>.*)/$', views.file_response_download, name='file_download'),
+    # Legacy path download route has been removed to enforce unified permissions
 
 ]

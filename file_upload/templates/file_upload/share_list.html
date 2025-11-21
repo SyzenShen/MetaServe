@@ -1,0 +1,66 @@
+{% extends "file_upload/base.html" %}
+
+{% block title %}文件共享管理{% endblock %}
+
+{% block content %}
+<h3>文件共享列表</h3>
+<p>
+  <a class="btn btn-primary" href="{% url 'file_upload:share_create_page' %}">新建共享</a>
+</p>
+
+{% if shares %}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>文件</th>
+      <th>共享目标</th>
+      <th>下载权限</th>
+      <th>可编辑元数据</th>
+      <th>到期时间</th>
+      <th>创建时间</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in shares %}
+    <tr>
+      <td>
+        <a href="{% url 'file_download:file_download_by_id' s.file.id %}">
+          {{ s.file.original_filename|default:s.file.file.name }}
+        </a>
+      </td>
+      <td>
+        {% if s.shared_to_user %}
+          用户：{{ s.shared_to_user.email }}
+        {% elif s.shared_to_organization %}
+          组织：{{ s.shared_to_organization.name }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>{{ s.can_download|yesno:"允许,禁止" }}</td>
+      <td>{{ s.can_edit_metadata|yesno:"允许,禁止" }}</td>
+      <td>
+        {% if s.expires_at %}
+          {{ s.expires_at|date:"Y-m-d H:i" }}
+          {% if not s.is_active %}<span class="label label-default">已过期</span>{% endif %}
+        {% else %}
+          永不过期
+        {% endif %}
+      </td>
+      <td>{{ s.created_at|date:"Y-m-d H:i" }}</td>
+      <td>
+        <form action="" method="post" style="display:inline-block;">
+          {% csrf_token %}
+          <input type="hidden" name="share_id" value="{{ s.id }}">
+          <button class="btn btn-danger btn-sm" type="submit">撤销共享</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>暂无共享记录。</p>
+{% endif %}
+{% endblock %}

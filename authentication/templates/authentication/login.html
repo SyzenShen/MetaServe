@@ -1,0 +1,21 @@
+{% extends "file_upload/base.html" %}
+
+{% block title %}登录{% endblock %}
+
+{% block content %}
+<h3>登录</h3>
+
+<form action="" method="post" class="form" style="max-width:360px;">
+  {% csrf_token %}
+  <div class="form-group">
+    <label>用户名或邮箱</label>
+    <input type="text" name="username" class="form-control" required>
+  </div>
+  <div class="form-group">
+    <label>密码</label>
+    <input type="password" name="password" class="form-control" required>
+  </div>
+  <button class="btn btn-primary" type="submit">登录</button>
+</form>
+
+{% endblock %}

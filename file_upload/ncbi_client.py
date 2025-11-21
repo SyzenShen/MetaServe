@@ -6,6 +6,7 @@ from typing import Dict, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 import requests
+import time
 from django.conf import settings
 
 
@@ -18,9 +19,32 @@ ENA_FILEREPORT_URL = "https://www.ebi.ac.uk/ena/portal/api/filereport"
 DEFAULT_MAX_BYTES = getattr(settings, "NCBI_MAX_DOWNLOAD_BYTES", 1024 * 1024 * 1024)  # 1 GiB
 DEFAULT_TIMEOUT = getattr(settings, "NCBI_HTTP_TIMEOUT", 120)
 
+# Optional log path injected via environment at runtime for progress polling
+NCBI_LOG_PATH = os.environ.get("NCBI_LOG_PATH")
+
+def _log(msg: str):
+  """Write a timestamped line to the progress log.
+
+  Read the log path from environment each time so callers can set
+  NCBI_LOG_PATH immediately before invoking download functions.
+  """
+  try:
+    path = os.environ.get("NCBI_LOG_PATH") or NCBI_LOG_PATH
+    if path:
+      ts = time.strftime('%Y-%m-%d %H:%M:%S')
+      with open(path, "a", buffering=1) as lf:
+        lf.write(f"{ts} [NCBI] {msg}\n")
+  except Exception:
+    # Best-effort logging; ignore file write errors
+    pass
+
 
 class NCBIDownloadError(Exception):
   """Raised when an NCBI resource cannot be fetched."""
+
+
+class NCBIDownloadCanceled(NCBIDownloadError):
+  """Raised when a download is canceled by user action."""
 
 
 class NCBIDownloadTooLarge(NCBIDownloadError):
@@ -168,6 +192,7 @@ def parse_ncbi_url(url: str) -> Tuple[str, str]:
 
 
 def _download_streaming(url: str, params: Optional[Dict[str, str]], suffix: str, max_bytes: int) -> Tuple[str, int, Dict[str, str]]:
+  _log(f"HTTP GET {url} params={params}")
   with requests.get(url, params=params, stream=True, timeout=DEFAULT_TIMEOUT) as resp:
     if resp.status_code != 200:
       # 尝试读取少量文本以提供更清晰的错误信息
@@ -179,24 +204,67 @@ def _download_streaming(url: str, params: Optional[Dict[str, str]], suffix: str,
       detail = f"NCBI 返回错误状态码 {resp.status_code}"
       if msg:
         detail = f"{detail}：{msg}"
+      _log(f"HTTP {resp.status_code} error: {msg}")
       raise NCBIDownloadError(detail)
     total_bytes = 0
     headers = resp.headers
     content_length = headers.get("Content-Length")
+    if content_length:
+      _log(f"Content-Length: {content_length} bytes")
     if content_length and int(content_length) > max_bytes:
       raise NCBIDownloadTooLarge(f"文件大小 {content_length} 超过限制 {max_bytes}")
 
     handle, file_path = tempfile.mkstemp(suffix=f".{suffix}")
+    last_logged_percent = -1
+    last_logged_mb = 0
+    last_logged_time = time.time()
+    # cancellation flag path (created by backend cancel endpoint)
+    cancel_flag = os.environ.get("NCBI_CANCEL_PATH") or ""
+    cancel_env = os.environ.get("NCBI_CANCEL")
     with os.fdopen(handle, "wb") as tmp:
       for chunk in resp.iter_content(chunk_size=8192):
         if not chunk:
           continue
+        # Check for cancellation before processing further
+        try:
+          if (cancel_env == "1") or (cancel_flag and os.path.exists(cancel_flag)):
+            _log("Canceled by user; aborting download")
+            try:
+              tmp.close()
+            except Exception:
+              pass
+            try:
+              os.remove(file_path)
+            except Exception:
+              pass
+            raise NCBIDownloadCanceled("用户已取消下载")
+        except Exception:
+          # If checking cancel flag itself fails, ignore and continue
+          pass
         total_bytes += len(chunk)
         if total_bytes > max_bytes:
           tmp.close()
           os.remove(file_path)
           raise NCBIDownloadTooLarge(f"文件大小超过限制 {max_bytes} 字节")
         tmp.write(chunk)
+        # Progress logging for frontend heuristics
+        try:
+          if content_length:
+            length = int(content_length)
+            percent = int((total_bytes * 100) / length) if length > 0 else 0
+            if percent >= 0 and percent <= 100 and percent >= (last_logged_percent + 3):
+              last_logged_percent = percent
+              _log(f"Progress {percent}%")
+          else:
+            mb = total_bytes // (1024 * 1024)
+            # 更频繁地写入进度：至少每 1MB 或每 3 秒一次，便于前端快速得到速度/ETA
+            now = time.time()
+            if (mb - last_logged_mb >= 1) or (now - last_logged_time >= 3):
+              last_logged_mb = mb
+              last_logged_time = now
+              _log(f"Downloaded {mb} MB")
+        except Exception:
+          pass
     return file_path, total_bytes, headers
 
 
@@ -287,8 +355,10 @@ def _ena_fetch_fastq_links(accession: str) -> Tuple[Optional[str], Optional[str]
     if not urls:
       return None, (layout or None), None
     first = urls[0]
+    _log(f"ENA links resolved for {accession}; layout={layout}, first={first}")
     return first, (layout or None), ";".join(urls)
   except Exception:
+    _log(f"ENA filereport failed for {accession}")
     return None, None, None
 
 
@@ -330,6 +400,7 @@ def download_ncbi_resource(url: str, max_bytes: Optional[int] = None) -> NCBIDow
     suffix = config["ext"]
     params = {"acc": accession}
     try:
+      _log(f"Start NCBI SRA fastq for {accession}")
       file_path, total_bytes, headers = _download_streaming(SRA_FASTQ_URL, params=params, suffix=suffix, max_bytes=max_allowed)
       file_format = _normalize_file_format(suffix)
       metadata = _fetch_summary("sra", accession)
@@ -339,6 +410,7 @@ def download_ncbi_resource(url: str, max_bytes: Optional[int] = None) -> NCBIDow
         "source_url": url,
       })
       filename = f"{accession}.{suffix}"
+      _log(f"NCBI SRA fastq completed for {accession} bytes={total_bytes}")
       return NCBIDownloadResult(
         accession=accession,
         db="sra",
@@ -352,6 +424,7 @@ def download_ncbi_resource(url: str, max_bytes: Optional[int] = None) -> NCBIDow
       # Fallback to ENA mirror when NCBI indicates run too large for direct retrieval
       msg = str(exc).lower()
       if "too big" in msg or "sra toolkit" in msg or "501" in msg:
+        _log(f"NCBI direct retrieval failed for {accession}: {exc}; trying ENA")
         ena_result = _download_from_ena(accession, max_allowed)
         if ena_result:
           file_path, total_bytes, headers, ena_suffix, ena_name, all_urls = ena_result
@@ -364,6 +437,7 @@ def download_ncbi_resource(url: str, max_bytes: Optional[int] = None) -> NCBIDow
             "ena_mirror_urls": all_urls,
           })
           filename = ena_name or f"{accession}.{ena_suffix}"
+          _log(f"ENA download completed for {accession} bytes={total_bytes}")
           return NCBIDownloadResult(
             accession=accession,
             db="sra",
@@ -374,6 +448,7 @@ def download_ncbi_resource(url: str, max_bytes: Optional[int] = None) -> NCBIDow
             metadata=metadata,
           )
       # Otherwise, raise a clearer guidance message
+      _log(f"NCBI/ENA download failed for {accession}: {exc}")
       raise NCBIDownloadError(
         (
           f"NCBI 无法直接检索该运行（{accession}）：{exc}. "
@@ -411,6 +486,7 @@ def download_ncbi_resource(url: str, max_bytes: Optional[int] = None) -> NCBIDow
   else:
     filename = f"{accession}.{suffix}"
 
+  _log(f"EFETCH completed for {db}:{accession} bytes={total_bytes}")
   return NCBIDownloadResult(
     accession=accession,
     db=db,

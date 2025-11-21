@@ -11,6 +11,7 @@ import requests
 from pathlib import Path
 
 from rest_framework import status
+from django.db.models import Q
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, permission_classes, parser_classes, authentication_classes
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -19,10 +20,12 @@ from rest_framework.response import Response
 from django.conf import settings
 from django.http import Http404, StreamingHttpResponse, FileResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 from django.core.files import File as DjangoFile
 
 from .models import File, Folder
+from .permission_utils import can_view_or_download_file
 from .serializers import FileSerializer, FileUploadSerializer, FolderSerializer, FolderCreateSerializer
 from .ncbi_client import (
     NCBIDownloadError,
@@ -313,9 +316,41 @@ def file_list(request):
         folders = Folder.objects.filter(user=request.user, parent=current_folder).order_by('name')
         files = File.objects.filter(user=request.user, parent_folder=current_folder).order_by('-uploaded_at')
     else:
-        # 根目录：获取没有父文件夹的文件夹和文件
+        # 根目录：获取没有父文件夹的文件夹和文件（仅当前用户）
         folders = Folder.objects.filter(user=request.user, parent=None).order_by('name')
         files = File.objects.filter(user=request.user, parent_folder=None).order_by('-uploaded_at')
+
+        # 额外合并：共享给当前用户或其所在组织的文件（不再合并同组织的 Internal 文件）
+        try:
+            from authentication.models import Membership
+            from .models import FileShare
+
+            now = timezone.now()
+
+            # 当前用户所在组织ID集合
+            user_org_ids = set(Membership.objects.filter(user=request.user).values_list('organization_id', flat=True))
+
+            # 有效（未过期）并允许下载的共享到当前用户
+            shares_to_user = FileShare.objects.filter(
+                shared_to_user_id=request.user.id,
+                can_download=True,
+            ).filter(Q(expires_at__isnull=True) | Q(expires_at__gte=now))
+
+            # 有效并允许下载的共享到当前用户所在的组织
+            shares_to_org = FileShare.objects.filter(
+                shared_to_organization_id__in=list(user_org_ids) if user_org_ids else [],
+                can_download=True,
+            ).filter(Q(expires_at__isnull=True) | Q(expires_at__gte=now))
+
+            shared_file_ids = set(shares_to_user.values_list('file_id', flat=True)) | set(shares_to_org.values_list('file_id', flat=True))
+
+            # 合并并去重（保持时间倒序）。注意：不合并 Internal 可见范围，只显示自己的 Internal 文件
+            base_ids = set(files.values_list('id', flat=True))
+            all_ids = base_ids | shared_file_ids
+            if all_ids:
+                files = File.objects.filter(id__in=list(all_ids)).order_by('-uploaded_at')
+        except Exception as e:
+            logger.exception("Failed to augment file_list with shared/internal: %s", e)
     
     folder_serializer = FolderSerializer(folders, many=True, context={'request': request})
     file_serializer = FileSerializer(files, many=True, context={'request': request})
@@ -325,6 +360,134 @@ def file_list(request):
         'folders': folder_serializer.data,
         'files': file_serializer.data
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def file_list_shared_to_me(request):
+    """列出共享给当前用户的文件（未过期且允许下载）"""
+    from .models import FileShare
+    shares = FileShare.objects.filter(shared_to_user=request.user)
+    shares = [s for s in shares if s.is_active() and s.can_download]
+    file_ids = [s.file_id for s in shares]
+    files = File.objects.filter(id__in=file_ids).order_by('-uploaded_at')
+    serializer = FileSerializer(files, many=True, context={'request': request})
+    return Response({'files': serializer.data})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def file_list_org_internal(request):
+    """列出同组织内可访问的 Internal 文件（包含自己与同组织成员）"""
+    try:
+        from authentication.models import Membership
+    except Exception:
+        return Response({'files': []})
+
+    # 当前用户组织集合
+    user_org_ids = set(Membership.objects.filter(user=request.user).values_list('organization_id', flat=True))
+    if not user_org_ids:
+        return Response({'files': []})
+
+    # 找到同组织成员的用户ID
+    member_user_ids = set(Membership.objects.filter(organization_id__in=user_org_ids).values_list('user_id', flat=True))
+
+    files = File.objects.filter(user_id__in=member_user_ids, access_level__iexact='Internal').order_by('-uploaded_at')
+    serializer = FileSerializer(files, many=True, context={'request': request})
+    return Response({'files': serializer.data})
+
+
+# ---- 文件共享管理 API ----
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def file_share_create(request):
+    """创建文件共享到用户或组织，仅文件拥有者可操作"""
+    # 延迟导入避免循环引用
+    from .models import FileShare
+    file_id = request.data.get('file_id')
+    user_id = request.data.get('user_id') or request.data.get('shared_to_user_id')
+    organization_id = request.data.get('organization_id') or request.data.get('shared_to_organization_id')
+    can_download = bool(request.data.get('can_download', True))
+    can_edit_metadata = bool(request.data.get('can_edit_metadata', False))
+    expires_at = request.data.get('expires_at')  # ISO8601，可为空
+
+    try:
+        f = File.objects.get(id=file_id)
+    except File.DoesNotExist:
+        return Response({'detail': 'file not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if f.user_id != request.user.id and not request.user.is_superuser:
+        return Response({'detail': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+    if not user_id and not organization_id:
+        return Response({'detail': 'must provide user_id or organization_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+    share_kwargs = {
+        'file': f,
+        'can_download': can_download,
+        'can_edit_metadata': can_edit_metadata,
+    }
+    if expires_at:
+        from django.utils.dateparse import parse_datetime
+        dt = parse_datetime(expires_at)
+        if not dt:
+            return Response({'detail': 'invalid expires_at'}, status=status.HTTP_400_BAD_REQUEST)
+        share_kwargs['expires_at'] = dt
+
+    if user_id:
+        share_kwargs['shared_to_user_id'] = int(user_id)
+    if organization_id:
+        share_kwargs['shared_to_organization_id'] = int(organization_id)
+
+    share, _ = FileShare.objects.update_or_create(
+        file=f,
+        shared_to_user_id=share_kwargs.get('shared_to_user_id'),
+        shared_to_organization_id=share_kwargs.get('shared_to_organization_id'),
+        defaults=share_kwargs,
+    )
+    return Response({'id': share.id}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def file_share_list(request):
+    """列出当前用户拥有文件的共享记录"""
+    from .models import FileShare
+    shares = FileShare.objects.filter(file__user=request.user).select_related('file')
+    now = timezone.now()
+    data = []
+    for s in shares:
+        expired = bool(s.expires_at and s.expires_at < now)
+        data.append({
+            'id': s.id,
+            'file_id': s.file_id,
+            'shared_to_user_id': s.shared_to_user_id,
+            'shared_to_organization_id': s.shared_to_organization_id,
+            'can_download': s.can_download,
+            'can_edit_metadata': s.can_edit_metadata,
+            'expires_at': s.expires_at.isoformat() if s.expires_at else None,
+            'expired': expired,
+        })
+    return Response({'shares': data}, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def file_share_delete(request, share_id):
+    """删除共享记录，仅文件拥有者可删"""
+    from .models import FileShare
+    try:
+        s = FileShare.objects.select_related('file').get(id=share_id)
+    except FileShare.DoesNotExist:
+        return Response({'detail': 'share not found'}, status=status.HTTP_404_NOT_FOUND)
+    if s.file.user_id != request.user.id and not request.user.is_superuser:
+        return Response({'detail': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
+    s.delete()
+    return Response({'message': 'share deleted'}, status=status.HTTP_200_OK)
 
 
 @csrf_exempt
@@ -341,6 +504,37 @@ def file_upload(request):
     serializer = FileUploadSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         file_obj = serializer.save()
+
+        # 如果是受限访问并且提供了组织ID，则创建文件共享记录（仅 owner/admin 允许）
+        try:
+            access_level = (file_obj.access_level or '').strip()
+            org_id = request.data.get('organization_id')
+            if access_level == 'Restricted' and org_id:
+                from .models import FileShare
+                from authentication.models import Organization, Membership
+                try:
+                    organization = Organization.objects.get(id=org_id)
+                    # 权限：只有该组织的 owner/admin 才能在上传时共享到组织
+                    me = Membership.objects.filter(organization_id=org_id, user=request.user).first()
+                    if not me or me.role not in ('owner', 'admin'):
+                        return Response({'detail': 'only owner/admin can upload to organization'}, status=status.HTTP_403_FORBIDDEN)
+                    FileShare.objects.create(
+                        file=file_obj,
+                        shared_to_organization=organization,
+                        can_download=True,
+                        can_edit_metadata=False,
+                    )
+                except Organization.DoesNotExist:
+                    logger.warning(f"organization_id {org_id} not found; skip FileShare creation")
+            elif access_level == 'Restricted' and not org_id:
+                # 未选择组织但选择了 Restricted：仅当用户在任一组织中为 owner/admin 才允许
+                from authentication.models import Membership
+                has_privileged_role = Membership.objects.filter(user=request.user, role__in=['owner', 'admin']).exists()
+                if not has_privileged_role:
+                    return Response({'detail': 'only owner/admin can set Restricted access'}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            logger.exception("Failed to create FileShare on restricted upload: %s", e)
+
         response_serializer = FileSerializer(file_obj, context={'request': request})
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
     
@@ -464,11 +658,16 @@ def file_delete(request, file_id):
 def file_download(request, file_id):
     """文件下载"""
     try:
-        # 获取文件对象
+        # 获取文件对象（不再限定为当前用户），改为对象级权限校验
         try:
-            file_obj = File.objects.get(id=file_id, user=request.user)
+            file_obj = File.objects.get(id=file_id)
         except File.DoesNotExist:
-            logger.warning(f"File not found: id={file_id}, user={request.user.id}")
+            logger.warning(f"File not found: id={file_id}")
+            raise Http404("File not found")
+
+        # 权限校验
+        if not can_view_or_download_file(request.user, file_obj):
+            logger.info(f"Forbidden download: file_id={file_id}, user={request.user.id}")
             raise Http404("File not found")
 
         # 验证文件是否存在

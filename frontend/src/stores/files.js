@@ -1062,6 +1062,9 @@ export const useFilesStore = defineStore('files', {
         formData.append('file_format', metadata.file_format || 'other')
         formData.append('document_type', metadata.document_type || 'Dataset')
         formData.append('access_level', metadata.access_level || 'Internal')
+        if (metadata.organization_id) {
+          formData.append('organization_id', metadata.organization_id)
+        }
         formData.append('organism', metadata.organism || '')
         formData.append('experiment_type', metadata.experiment_type || '')
         formData.append('tags', metadata.tags || '')

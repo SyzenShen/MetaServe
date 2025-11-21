@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Storage stress harness for BioFileManager.
+Storage stress harness for MetaServe.
 
 Generates synthetic files, uploads them via REST API, captures response metrics,
 and optionally cleans up the artefacts. Designed to help forecast storage limits.
@@ -279,7 +279,7 @@ class StorageStressRunner:
 # --------------------------------------------------------------------------- CLI
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="BioFileManager storage stress harness")
+    parser = argparse.ArgumentParser(description="MetaServe storage stress harness")
     parser.add_argument("--config", type=Path, help="Path to JSON configuration file.")
     parser.add_argument("--base-url", type=str, default="http://localhost:8000", help="Django backend URL.")
     parser.add_argument("--token", type=str, help="DRF token (fallback: BIOFILE_TOKEN env).")

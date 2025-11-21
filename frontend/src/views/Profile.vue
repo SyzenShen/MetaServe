@@ -18,10 +18,6 @@
           <h2 class="ms-section-title">Basic Information</h2>
           <div class="ms-info-list">
             <div class="ms-info-row">
-              <span class="ms-label">Username</span>
-              <span class="ms-value">{{ currentUser.username }}</span>
-            </div>
-            <div class="ms-info-row">
               <span class="ms-label">Email Address</span>
               <span class="ms-value">{{ currentUser.email }}</span>
             </div>
@@ -33,20 +29,17 @@
               <span class="ms-label">Last Login</span>
               <span class="ms-value">{{ formatDate(currentUser.last_login) }}</span>
             </div>
-          </div>
-        </div>
-
-        <!-- 统计信息 -->
-        <div class="ms-section">
-          <h2 class="ms-section-title">Account Statistics</h2>
-          <div class="ms-stats-grid">
-            <div class="ms-stat-item">
-              <div class="ms-stat-number">{{ fileCount }}</div>
-              <div class="ms-stat-label">Uploaded Files</div>
+            <div class="ms-info-row" v-if="organizations && organizations.length">
+              <span class="ms-label">Organizations</span>
+              <div class="ms-value ms-org-list">
+                <div class="ms-org-item" v-for="o in organizations" :key="o.id">
+                  {{ o.name }}<span v-if="o.role" class="ms-org-role"> ({{ o.role }})</span>
+                </div>
+              </div>
             </div>
-            <div class="ms-stat-item">
-              <div class="ms-stat-number">{{ formatFileSize(totalFileSize) }}</div>
-              <div class="ms-stat-label">Total File Size</div>
+            <div class="ms-action-row">
+              <button class="ms-action-btn" @click="openChangePassword">Change Password</button>
+              <!-- 已移到导航栏，仅保留密码修改按钮 -->
             </div>
           </div>
         </div>
@@ -57,6 +50,9 @@
         <div class="ms-spinner"></div>
         <p>Loading user information...</p>
       </div>
+
+      <!-- 修改密码弹窗 -->
+      <ChangePasswordDialog v-if="showChangePassword" @close="closeChangePassword" @success="onPasswordChanged" />
     </div>
   </div>
 </template>
@@ -65,52 +61,75 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useFilesStore } from '../stores/files'
+import axios from 'axios'
+import ChangePasswordDialog from '../components/ChangePasswordDialog.vue'
 
 export default {
   name: 'Profile',
+  components: { ChangePasswordDialog },
   setup() {
     const router = useRouter()
     const authStore = useAuthStore()
-    const filesStore = useFilesStore()
     
     const currentUser = computed(() => authStore.currentUser)
-    const fileCount = computed(() => filesStore.files.length)
-    const totalFileSize = computed(() => {
-      // 使用后端返回的 file_size 字段进行累加，修复显示错误
-      return filesStore.files.reduce((total, file) => total + (file.file_size || 0), 0)
-    })
+    const isSuperuser = computed(() => !!authStore.currentUser?.is_superuser)
+    const organizations = ref([])
     
     const formatDate = (dateString) => {
       if (!dateString) return 'Unknown'
       return new Date(dateString).toLocaleString('en-US')
     }
     
-    const formatFileSize = (bytes) => {
-      if (bytes === 0) return '0 B'
-      const k = 1024
-      const sizes = ['B', 'KB', 'MB', 'GB']
-      const i = Math.floor(Math.log(bytes) / Math.log(k))
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-    }
     
     const handleLogout = async () => {
       await authStore.logout()
       router.push('/')
     }
+
+    const goAdmin = () => {
+      // 进入后端组织成员管理 UI（用户提供的目标端口与路径）
+    // 通过前端代理到后端，避免跨域与外网端口直连导致的 502
+    // 跳转到组织列表页，便于创建/管理组织
+    const url = `/api/auth/orgs/ui/`
+      window.location.href = url
+    }
+
+    const showChangePassword = ref(false)
+    const openChangePassword = () => { showChangePassword.value = true }
+    const closeChangePassword = () => { showChangePassword.value = false }
+    const onPasswordChanged = () => {
+      // 修改成功后刷新用户信息（防止服务端对安全字段有更新）
+      authStore.fetchUser()
+    }
     
+    // 加载组织列表
+    const fetchOrganizations = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const headers = token ? { Authorization: `Token ${token}` } : {}
+        const res = await axios.get('/api/auth/orgs/', { headers })
+        organizations.value = res.data?.organizations || []
+      } catch (e) {
+        console.warn('获取组织列表失败：', e?.response?.status, e?.response?.data || e?.message)
+        organizations.value = []
+      }
+    }
+
     onMounted(() => {
-      // 获取用户文件统计信息
-      filesStore.fetchFiles()
+      fetchOrganizations()
     })
     
     return {
       currentUser,
-      fileCount,
-      totalFileSize,
       formatDate,
-      formatFileSize,
-      handleLogout
+      handleLogout,
+      isSuperuser,
+      goAdmin,
+      organizations,
+      showChangePassword,
+      openChangePassword,
+      closeChangePassword,
+      onPasswordChanged
     }
   }
 }
@@ -120,24 +139,30 @@ export default {
 /* 微软风格个人资料页面 */
 .ms-profile-container {
   min-height: 100vh;
-  background: white;
+  background: transparent; /* 与全局 body 背景一致，去掉外层矩形 */
   padding: 20px;
 }
 
 .ms-profile-content {
-  max-width: 800px;
+  width: 960px; /* 固定更宽的泡泡宽度 */
+  max-width: 960px;
   margin: 0 auto;
+  background: #fff;
+  border-radius: 16px; /* 圆角气泡 */
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  /* 让页面各处可用统一主题色变量 */
+  --profile-primary: rgb(58, 126, 185);
+  --profile-primary-hover: rgb(45, 102, 150);
 }
 
 /* 头部样式 */
 .ms-profile-header {
   background: white;
-  padding: 24px 32px 24px;
+  padding: 16px 24px 12px; /* 降低整体高度 */
   display: flex;
   align-items: center;
   gap: 16px;
-  --profile-primary: rgb(58, 126, 185);
-  --profile-primary-hover: rgb(45, 102, 150);
 }
 
 .ms-avatar {
@@ -171,7 +196,7 @@ export default {
 }
 
 .ms-section {
-  padding: 24px 32px;
+  padding: 16px 24px; /* 降低整体高度 */
 }
 
 .ms-section-title {
@@ -193,8 +218,8 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
-  min-height: 32px;
+  padding: 6px 0; /* 降低整体高度 */
+  min-height: 28px;
 }
 
 .ms-label {
@@ -213,6 +238,45 @@ export default {
   flex: 1;
 }
 
+/* 组织列表纵向排列，左对齐显示 */
+.ms-org-list {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ms-org-item {
+  line-height: 1.4;
+}
+.ms-org-role {
+  color: #605e5c;
+}
+
+.ms-action-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.ms-action-btn {
+  background: var(--profile-primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ms-action-btn:hover {
+  background: var(--profile-primary-hover);
+}
+
+.ms-admin-btn {
+  margin-left: 8px; /* 仅用于与前一个按钮间隔，样式继承 ms-action-btn */
+}
+
+
 /* 统计网格 */
 .ms-stats-grid {
   display: grid;
@@ -221,7 +285,7 @@ export default {
 }
 
 .ms-stat-item {
-  background: #faf9f8;
+  background: #ffffff; /* 纯白背景，去掉灰边视觉 */
   border-radius: var(--waves-radius-sm);
   padding: 16px;
   text-align: center;
@@ -276,6 +340,10 @@ export default {
   .ms-profile-container {
     padding: 16px;
   }
+  .ms-profile-content {
+    width: 100%; /* 小屏等比收缩 */
+    max-width: 100%;
+  }
   
   .ms-profile-header {
     padding: 20px 24px 12px;
@@ -312,6 +380,10 @@ export default {
 @media (max-width: 480px) {
   .ms-profile-container {
     padding: 12px;
+  }
+  .ms-profile-content {
+    width: 100%;
+    max-width: 100%;
   }
   
   .ms-profile-header {

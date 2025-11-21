@@ -25,7 +25,7 @@ SECRET_KEY = '1ai#)@_az=1a-zwtlq4e4#m#@*^84w#qp&!r+7&822ns_6^70d'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '222.29.189.123']
 
 
 # Application definition
@@ -137,7 +137,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static"), ]
+STATICFILES_DIRS = [p for p in [os.path.join(BASE_DIR, "static"), os.path.join(BASE_DIR, "waves-core-ui", "img")] if os.path.isdir(p)]
 
 # specify media root for user uploaded files,
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -161,6 +161,9 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
     ],
 }
+
+# Primary key type (suppress auto-created PK warnings on Django 4.x)
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
@@ -199,6 +202,9 @@ CSRF_TRUSTED_ORIGINS = [
     # 允许 Vite 开发服务器作为可信来源
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    # 允许服务器外网地址访问
+    "http://222.29.189.123:5173",
+    "http://222.29.189.123:8020",
 ]
 
 # NCBI integration defaults
@@ -225,3 +231,6 @@ CELLXGENE_PID_FILE = os.environ.get('CELLXGENE_PID_FILE', os.path.join(BASE_DIR,
 CELLXGENE_LOG_FILE = os.environ.get('CELLXGENE_LOG_FILE', os.path.join(BASE_DIR, 'logs', 'cellxgene.log'))
 CELLXGENE_AUTO_RESTART = os.environ.get('CELLXGENE_AUTO_RESTART', 'true').lower() == 'true'
 CELLXGENE_PYTHON = os.environ.get('CELLXGENE_PYTHON', os.path.join(os.path.dirname(CELLXGENE_CMD), 'python'))
+
+# Allow embedding pages in same-origin frames for IDE preview
+X_FRAME_OPTIONS = 'SAMEORIGIN'
