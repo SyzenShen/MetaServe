@@ -26,7 +26,9 @@ def org_list_page(request):
                 messages.error(request, 'Organization not found')
                 return redirect('org_list_page')
             me = Membership.objects.filter(organization=org, user=request.user).first()
-            if not me or me.role != 'owner':
+            # 允许组织所有者删除，即使成员记录缺失
+            is_owner = (org.owner_id == request.user.id)
+            if not (is_owner or (me and me.role == 'owner')):
                 messages.error(request, 'Only owner can delete organization')
                 return redirect('org_list_page')
             org.delete()
@@ -170,4 +172,5 @@ def login_page(request):
 def logout_page(request):
     logout(request)
     messages.success(request, 'Logged out')
-    return redirect('/api/auth/ui/login/')
+    # 退出管理界面后，跳转到前端用户登录页而不是后端UI登录页
+    return redirect('/login')

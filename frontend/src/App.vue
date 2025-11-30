@@ -1,7 +1,7 @@
 <template>
   <div id="app" class="app-full-center">
-    <Navbar />
-    <main class="container">
+    <Navbar v-if="showNavbar" />
+    <main class="container" :class="mainClass">
       <transition name="fade" mode="out-in">
         <router-view />
       </transition>
@@ -16,6 +16,9 @@
 import Navbar from './components/Navbar.vue'
 import LoadingOverlay from './components/LoadingOverlay.vue'
 import GlobalNcbiDialog from './components/GlobalNcbiDialog.vue'
+import { computed } from 'vue'
+import { useAuthStore } from './stores/auth'
+import { useRoute } from 'vue-router'
 
 export default {
   name: 'App',
@@ -23,6 +26,15 @@ export default {
     Navbar,
     LoadingOverlay,
     GlobalNcbiDialog
+  },
+  setup() {
+    const authStore = useAuthStore()
+    const route = useRoute()
+    // 未登录首页('/')隐藏导航栏，其余页面或已登录显示
+    const showNavbar = computed(() => authStore.isAuthenticated || route.path !== '/')
+    // 未登录首页裁掉页面顶部20px
+    const mainClass = computed(() => (!authStore.isAuthenticated && route.path === '/') ? 'home-top-crop' : '')
+    return { showNavbar, mainClass }
   }
 }
 </script>

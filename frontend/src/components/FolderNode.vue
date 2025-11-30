@@ -24,7 +24,7 @@
       
       <!-- 文件夹名称 -->
       <span class="folder-name" :title="folder.name">
-        {{ folder.name }}
+        {{ folder.name }}<template v-if="folder.organization_name"> · {{ folder.organization_name }}</template>
       </span>
     </div>
     

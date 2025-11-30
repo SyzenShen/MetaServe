@@ -15,6 +15,7 @@ from .validators import ComplexPasswordValidator
 from django.http import FileResponse, HttpResponseNotFound
 from django.conf import settings
 import os
+from django.db.models import Q
 
 
 @csrf_exempt
@@ -182,12 +183,23 @@ def org_create(request):
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
 def org_list(request):
-    """列出当前用户关联的组织"""
-    qs = Organization.objects.filter(memberships__user=request.user).distinct()
-    # 返回当前用户在各组织的角色，便于前端控制权限
+    """列出当前用户关联的组织
+
+    修复点：兼容历史数据中缺少 Membership 记录的情况，
+    将当前用户作为 Organization.owner 的组织也纳入返回结果。
+    同时在返回结构中包含 owner_id 字段，便于前端进行权限判断。
+    """
+    qs = Organization.objects.filter(Q(memberships__user=request.user) | Q(owner=request.user)).distinct()
+    # 返回当前用户在各组织的角色，便于前端控制权限；若为 owner 但无成员记录，则回填为 'owner'
     my_memberships = Membership.objects.filter(user=request.user, organization__in=qs).values('organization_id', 'role')
     role_map = {m['organization_id']: m['role'] for m in my_memberships}
-    data = [{'id': o.id, 'name': o.name, 'role': role_map.get(o.id)} for o in qs]
+
+    data = []
+    for o in qs:
+        role = role_map.get(o.id)
+        if not role and o.owner_id == request.user.id:
+            role = 'owner'
+        data.append({'id': o.id, 'name': o.name, 'role': role, 'owner_id': o.owner_id})
     return Response({'organizations': data}, status=status.HTTP_200_OK)
 
 

@@ -4,8 +4,9 @@ import urllib.parse
 import zipfile
 import tempfile
 from django.http import HttpResponse, Http404, StreamingHttpResponse, FileResponse
+from rest_framework.authtoken.models import Token
 from file_upload.models import File, Folder
-from file_upload.permission_utils import can_view_or_download_file
+from file_upload.permission_utils import can_view_or_download_file, can_view_folder
 from file_upload.permissions import IsFolderReadable
 
 # Create your views here.
@@ -136,9 +137,18 @@ def folder_download_by_id(request, folder_id):
     Download a folder as a ZIP archive containing all files and subfolders
     """
     try:
+        user = getattr(request, 'user', None)
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '') or request.headers.get('Authorization', '')
+        if (not user or getattr(user, 'is_anonymous', True)) and auth_header.startswith('Token '):
+            token_key = auth_header.split(' ', 1)[1].strip()
+            try:
+                token = Token.objects.get(key=token_key)
+                user = token.user
+            except Token.DoesNotExist:
+                pass
+
         folder = Folder.objects.get(id=folder_id)
-        # 简单的对象级权限：仅允许访问自己文件夹
-        if getattr(folder, 'user_id', None) != getattr(request.user, 'id', None):
+        if not can_view_folder(user, folder):
             raise Http404("Folder not found")
         
         # Create a temporary file for the ZIP
@@ -148,7 +158,7 @@ def folder_download_by_id(request, folder_id):
         try:
             # Create ZIP file
             with zipfile.ZipFile(temp_file.name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                _add_folder_to_zip(zipf, folder, folder.name, user=request.user)
+                _add_folder_to_zip(zipf, folder, folder.name, user=user)
             
             # Prepare response
             folder_name = folder.name or f"folder_{folder_id}"
@@ -216,9 +226,7 @@ def _add_folder_to_zip(zipf, folder, base_path="", user=None):
     
     # Recursively add subfolders (only traverse if the user can read the folder)
     for subfolder in folder.subfolders.all():
-        if getattr(subfolder, 'user_id', None) != getattr(user, 'id', None):
-            # Currently only owner traversal; extend here for org/global policies later
+        if not can_view_folder(user, subfolder):
             continue
         subfolder_path = os.path.join(base_path, subfolder.name)
         _add_folder_to_zip(zipf, subfolder, subfolder_path, user=user)
-

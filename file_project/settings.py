@@ -70,6 +70,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # expose org management visibility for owners
+                'authentication.context_processors.management_visibility',
             ],
         },
     },
@@ -134,10 +136,18 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.1/howto/static-files/
-
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [p for p in [os.path.join(BASE_DIR, "static"), os.path.join(BASE_DIR, "waves-core-ui", "img")] if os.path.isdir(p)]
+# 为避免与 Vite 中用于 Cellxgene 的 '/static/' 代理冲突，
+# 将 Django 静态文件前缀调整为 '/api/static/'，这样通过开发服务器访问
+# 时会随 '/api' 一并代理到后端 8020。
+STATIC_URL = '/api/static/'
+STATICFILES_DIRS = [
+    p for p in [
+        os.path.join(BASE_DIR, "static"),
+        os.path.join(BASE_DIR, "waves-core-ui", "img"),
+        # 引入已有的 DRF 静态资源目录，供本地 Bootstrap/jQuery 使用
+        os.path.join(BASE_DIR, "Django-Vue3-Admin", "backend", "static"),
+    ] if os.path.isdir(p)
+]
 
 # specify media root for user uploaded files,
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -234,3 +244,7 @@ CELLXGENE_PYTHON = os.environ.get('CELLXGENE_PYTHON', os.path.join(os.path.dirna
 
 # Allow embedding pages in same-origin frames for IDE preview
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# Downloader binary path configuration
+# If not provided via environment, default to the legacy deployment path.
+LND_PATH = os.environ.get('LND_PATH', '/home/mosserver/software/linuxnd')

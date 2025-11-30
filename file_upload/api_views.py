@@ -11,8 +11,24 @@ import requests
 from pathlib import Path
 
 from rest_framework import status
+from django.db import models
 from django.db.models import Q
-from rest_framework.authentication import TokenAuthentication
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
+from rest_framework.authtoken.models import Token
+
+class QueryTokenAuthentication(TokenAuthentication):
+    def authenticate(self, request):
+        auth = super().authenticate(request)
+        if auth:
+            return auth
+        key = request.query_params.get('token')
+        if not key:
+            return None
+        try:
+            t = Token.objects.get(key=key)
+        except Token.DoesNotExist:
+            return None
+        return (t.user, t)
 from rest_framework.decorators import api_view, permission_classes, parser_classes, authentication_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
@@ -25,7 +41,7 @@ from django.utils import timezone
 from django.core.files import File as DjangoFile
 
 from .models import File, Folder
-from .permission_utils import can_view_or_download_file
+from .permission_utils import can_view_or_download_file, can_delete_file, can_view_folder
 from .serializers import FileSerializer, FileUploadSerializer, FolderSerializer, FolderCreateSerializer
 from .ncbi_client import (
     NCBIDownloadError,
@@ -303,21 +319,25 @@ def file_list(request):
     """获取当前用户的文件列表，支持按文件夹过滤"""
     folder_id = request.GET.get('folder_id')
     
-    # 获取文件夹信息
+    # 获取文件夹信息（本人或组织文件夹）
     current_folder = None
+    base_folder_qs = Folder.objects.filter(models.Q(user=request.user) | models.Q(organization__memberships__user=request.user)).distinct()
     if folder_id:
         try:
-            current_folder = Folder.objects.get(id=folder_id, user=request.user)
+            current_folder = base_folder_qs.get(id=folder_id)
         except Folder.DoesNotExist:
             return Response({'error': '文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
     
-    # 获取当前文件夹下的子文件夹
+    # 获取当前文件夹下的子文件夹（本人或组织）
     if current_folder:
-        folders = Folder.objects.filter(user=request.user, parent=current_folder).order_by('name')
-        files = File.objects.filter(user=request.user, parent_folder=current_folder).order_by('-uploaded_at')
+        folders = base_folder_qs.filter(parent=current_folder).order_by('name')
+        files_qs = File.objects.filter(parent_folder=current_folder).order_by('-uploaded_at')
+        from .permission_utils import can_view_or_download_file
+        files = [f for f in files_qs if can_view_or_download_file(request.user, f)]
     else:
-        # 根目录：获取没有父文件夹的文件夹和文件（仅当前用户）
-        folders = Folder.objects.filter(user=request.user, parent=None).order_by('name')
+        # 根目录：本人或组织的根文件夹
+        folders = base_folder_qs.filter(parent=None).order_by('name')
+        # 根文件：仅显示本人，不在此处合并组织文件
         files = File.objects.filter(user=request.user, parent_folder=None).order_by('-uploaded_at')
 
         # 额外合并：共享给当前用户或其所在组织的文件（不再合并同组织的 Internal 文件）
@@ -490,6 +510,129 @@ def file_share_delete(request, share_id):
     return Response({'message': 'share deleted'}, status=status.HTTP_200_OK)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def accept_shared_file(request):
+    """接受共享的文件：复制到当前用户的 Files 中（默认为 Download 根目录）"""
+    file_id = request.data.get('file_id')
+    target_folder_id = request.data.get('target_folder_id') or request.data.get('folder_id')
+    try:
+        src = File.objects.get(id=file_id)
+    except File.DoesNotExist:
+        return Response({'detail': 'file not found'}, status=status.HTTP_404_NOT_FOUND)
+    if not can_view_or_download_file(request.user, src):
+        return Response({'detail': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
+    if not src.file or not os.path.exists(src.file.path):
+        return Response({'detail': 'source file not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    dest_parent = None
+    if target_folder_id:
+        try:
+            dest_parent = Folder.objects.get(id=int(target_folder_id), user=request.user)
+        except Folder.DoesNotExist:
+            dest_parent = None
+    if not dest_parent:
+        dest_parent, _ = Folder.objects.get_or_create(user=request.user, parent=None, name='Download')
+
+    try:
+        with open(src.file.path, 'rb') as fp:
+            django_file = DjangoFile(fp, name=src.original_filename or os.path.basename(src.file.name))
+            new = File(
+                user=request.user,
+                upload_method='Shared Accept',
+                parent_folder=dest_parent,
+                original_filename=src.original_filename or os.path.basename(src.file.name),
+                title=src.title or (src.original_filename or ''),
+                project=src.project,
+                document_type=src.document_type,
+                file_format=src.file_format,
+                access_level='Internal',
+                organism=src.organism,
+                experiment_type=src.experiment_type,
+                tags=src.tags,
+                description=src.description,
+            )
+            new.file.save(new.original_filename, django_file, save=True)
+        try:
+            new.extracted_metadata = getattr(src, 'extracted_metadata', {})
+            new.save(update_fields=['extracted_metadata'])
+        except Exception:
+            pass
+    except Exception:
+        return Response({'detail': 'copy failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    serializer = FileSerializer(new, context={'request': request})
+    return Response({'file': serializer.data}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def accept_shared_folder(request):
+    """接受共享的文件夹：递归复制到当前用户的 Files 中（默认为 Download 根目录）"""
+    folder_id = request.data.get('folder_id')
+    target_folder_id = request.data.get('target_folder_id') or request.data.get('dest_parent_id')
+    try:
+        src_root = Folder.objects.get(id=folder_id)
+    except Folder.DoesNotExist:
+        return Response({'detail': 'folder not found'}, status=status.HTTP_404_NOT_FOUND)
+    if not can_view_folder(request.user, src_root):
+        return Response({'detail': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+    dest_parent = None
+    if target_folder_id:
+        try:
+            dest_parent = Folder.objects.get(id=int(target_folder_id), user=request.user)
+        except Folder.DoesNotExist:
+            dest_parent = None
+    if not dest_parent:
+        dest_parent, _ = Folder.objects.get_or_create(user=request.user, parent=None, name='Download')
+
+    def _copy_folder(src_folder, dst_parent):
+        dst_folder, _ = Folder.objects.get_or_create(user=request.user, parent=dst_parent, name=src_folder.name)
+        files_qs = list(getattr(src_folder, 'files', []).all()) if hasattr(src_folder, 'files') else []
+        for f in files_qs:
+            if not can_view_or_download_file(request.user, f):
+                continue
+            if not f.file or not os.path.exists(f.file.path):
+                continue
+            try:
+                with open(f.file.path, 'rb') as fp:
+                    djf = DjangoFile(fp, name=f.original_filename or os.path.basename(f.file.name))
+                    nf = File(
+                        user=request.user,
+                        upload_method='Shared Accept',
+                        parent_folder=dst_folder,
+                        original_filename=f.original_filename or os.path.basename(f.file.name),
+                        title=f.title or (f.original_filename or ''),
+                        project=f.project,
+                        document_type=f.document_type,
+                        file_format=f.file_format,
+                        access_level='Internal',
+                        organism=f.organism,
+                        experiment_type=f.experiment_type,
+                        tags=f.tags,
+                        description=f.description,
+                    )
+                    nf.file.save(nf.original_filename, djf, save=True)
+                try:
+                    nf.extracted_metadata = getattr(f, 'extracted_metadata', {})
+                    nf.save(update_fields=['extracted_metadata'])
+                except Exception:
+                    pass
+            except Exception:
+                continue
+        for sub in src_folder.subfolders.all():
+            if can_view_folder(request.user, sub):
+                _copy_folder(sub, dst_folder)
+        return dst_folder
+
+    dst_root = _copy_folder(src_root, dest_parent)
+    serializer = FolderSerializer(dst_root, context={'request': request})
+    return Response({'folder': serializer.data}, status=status.HTTP_201_CREATED)
+
+
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -504,6 +647,20 @@ def file_upload(request):
     serializer = FileUploadSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         file_obj = serializer.save()
+
+        # 父文件夹组织继承与强制可见性
+        try:
+            parent_id = request.data.get('parent_folder')
+            if parent_id:
+                from .models import Folder
+                parent_folder = Folder.objects.filter(id=parent_id).first()
+                if parent_folder and getattr(parent_folder, 'organization', None):
+                    # 强制 Restricted 并继承组织
+                    file_obj.access_level = 'Restricted'
+                    file_obj.parent_folder = parent_folder
+                    file_obj.save(update_fields=['access_level', 'parent_folder'])
+        except Exception:
+            pass
 
         # 如果是受限访问并且提供了组织ID，则创建文件共享记录（仅 owner/admin 允许）
         try:
@@ -532,6 +689,18 @@ def file_upload(request):
                 has_privileged_role = Membership.objects.filter(user=request.user, role__in=['owner', 'admin']).exists()
                 if not has_privileged_role:
                     return Response({'detail': 'only owner/admin can set Restricted access'}, status=status.HTTP_403_FORBIDDEN)
+            else:
+                # 禁止在组织文件夹中上传 Internal/Public
+                try:
+                    parent_id = request.data.get('parent_folder')
+                    if parent_id:
+                        from .models import Folder
+                        pf = Folder.objects.filter(id=parent_id).first()
+                        if pf and getattr(pf, 'organization', None):
+                            if (access_level or '').lower() in ('internal', 'public'):
+                                return Response({'detail': 'cannot upload Internal/Public in organization folder; use Restricted'}, status=status.HTTP_403_FORBIDDEN)
+                except Exception:
+                    pass
         except Exception as e:
             logger.exception("Failed to create FileShare on restricted upload: %s", e)
 
@@ -642,10 +811,20 @@ def ncbi_import(request):
 def file_delete(request, file_id):
     """删除文件"""
     try:
-        file_obj = File.objects.get(id=file_id, user=request.user)
+        # 允许跨用户查找对象，但随后做对象级删除权限校验
+        file_obj = File.objects.get(id=file_id)
+
+        if not can_delete_file(request.user, file_obj):
+            # 与下载保持一致，隐藏资源存在性，防止信息泄露
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+
         # 删除物理文件
         if file_obj.file and os.path.exists(file_obj.file.path):
-            os.remove(file_obj.file.path)
+            try:
+                os.remove(file_obj.file.path)
+            except Exception:
+                # 即使物理删除失败，仍继续删除数据库记录，避免悬挂数据
+                pass
         file_obj.delete()
         return Response({'message': 'File deleted successfully'}, status=status.HTTP_200_OK)
     except File.DoesNotExist:
@@ -653,7 +832,7 @@ def file_delete(request, file_id):
 
 
 @api_view(['GET'])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([QueryTokenAuthentication, TokenAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def file_download(request, file_id):
     """文件下载"""
@@ -885,17 +1064,18 @@ def folder_list_create(request):
     """获取文件夹列表或创建新文件夹"""
     if request.method == 'GET':
         parent_id = request.GET.get('parent_id')
-        
+        from .permission_utils import can_view_folder
+        # 查询范围：属于本人或关联到任一我所在组织的文件夹
+        base_qs = Folder.objects.filter(models.Q(user=request.user) | models.Q(organization__memberships__user=request.user)).distinct()
         if parent_id:
             try:
-                parent_folder = Folder.objects.get(id=parent_id, user=request.user)
-                folders = Folder.objects.filter(user=request.user, parent=parent_folder).order_by('name')
+                parent_folder = base_qs.get(id=parent_id)
             except Folder.DoesNotExist:
-                return Response({'error': '父文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error': '父文件夹不存在或无权限访问'}, status=status.HTTP_404_NOT_FOUND)
+            folders = base_qs.filter(parent=parent_folder).order_by('name')
         else:
-            # 获取根目录下的文件夹
-            folders = Folder.objects.filter(user=request.user, parent=None).order_by('name')
-        
+            folders = base_qs.filter(parent=None).order_by('name')
+        folders = [f for f in folders if can_view_folder(request.user, f)]
         serializer = FolderSerializer(folders, many=True, context={'request': request})
         return Response(serializer.data)
     
@@ -904,10 +1084,27 @@ def folder_list_create(request):
         if serializer.is_valid():
             # 验证父文件夹权限
             parent_folder = serializer.validated_data.get('parent')
-            if parent_folder and parent_folder.user != request.user:
-                return Response({'error': '无权限在此文件夹下创建子文件夹'}, status=status.HTTP_403_FORBIDDEN)
-            
-            folder = serializer.save()
+            if parent_folder:
+                # 父文件夹需具备可见性
+                from .permission_utils import can_view_folder
+                if not can_view_folder(request.user, parent_folder):
+                    return Response({'error': '无权限在此文件夹下创建子文件夹'}, status=status.HTTP_403_FORBIDDEN)
+            # 组织创建权限：仅 owner/admin 可创建关联组织的文件夹
+            org = serializer.validated_data.get('organization')
+            if not org and parent_folder and getattr(parent_folder, 'organization', None):
+                org = parent_folder.organization
+            if org is not None:
+                try:
+                    from authentication.models import Membership
+                    me = Membership.objects.filter(organization_id=getattr(org, 'id', org), user=request.user).first()
+                    if not me or me.role not in ('owner', 'admin'):
+                        return Response({'error': '仅 owner/admin 可在组织下创建文件夹'}, status=status.HTTP_403_FORBIDDEN)
+                except Exception:
+                    return Response({'error': '组织信息错误'}, status=status.HTTP_400_BAD_REQUEST)
+            if org is not None:
+                folder = serializer.save(organization=org)
+            else:
+                folder = serializer.save()
             response_serializer = FolderSerializer(folder, context={'request': request})
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -918,23 +1115,62 @@ def folder_list_create(request):
 def folder_detail(request, folder_id):
     """获取、更新或删除文件夹"""
     try:
-        folder = Folder.objects.get(id=folder_id, user=request.user)
+        folder = Folder.objects.get(id=folder_id)
     except Folder.DoesNotExist:
         return Response({'error': '文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
-    
+    from .permission_utils import can_view_folder
+    if not can_view_folder(request.user, folder):
+        return Response({'error': '文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
     if request.method == 'GET':
         serializer = FolderSerializer(folder, context={'request': request})
         return Response(serializer.data)
     
     elif request.method == 'PUT':
-        serializer = FolderCreateSerializer(folder, data=request.data, context={'request': request})
+        serializer = FolderCreateSerializer(folder, data=request.data, context={'request': request}, partial=True)
         if serializer.is_valid():
             # 验证父文件夹权限
             parent_folder = serializer.validated_data.get('parent')
-            if parent_folder and parent_folder.user != request.user:
-                return Response({'error': '无权限移动到此文件夹'}, status=status.HTTP_403_FORBIDDEN)
-            
-            folder = serializer.save()
+            if parent_folder:
+                if not can_view_folder(request.user, parent_folder):
+                    return Response({'error': '无权限移动到此文件夹'}, status=status.HTTP_403_FORBIDDEN)
+            # 组织更新权限：仅 owner/admin 可设置组织字段
+            org = serializer.validated_data.get('organization')
+            if not org and parent_folder and getattr(parent_folder, 'organization', None):
+                org = parent_folder.organization
+            # 公开设置：仅根文件夹且拥有者或组织 owner/admin 才允许切换公开状态
+            is_public = serializer.validated_data.get('is_public', None)
+            if is_public is not None:
+                # 仅根文件夹
+                if folder.parent_id is not None:
+                    return Response({'error': '仅最上级文件夹可设置公开'}, status=status.HTTP_403_FORBIDDEN)
+                # 个人根：仅本人可改；组织根：仅组织 owner/admin 可改
+                if folder.organization_id is None:
+                    if folder.user_id != request.user.id and not getattr(request.user, 'is_superuser', False):
+                        return Response({'error': '无权限设置公开'}, status=status.HTTP_403_FORBIDDEN)
+                    # 公开优先：清除组织（个人根）
+                    serializer.validated_data['organization'] = None
+                else:
+                    # 允许文件夹拥有者或组织 owner/admin 切换公开
+                    if folder.user_id != request.user.id and not getattr(request.user, 'is_superuser', False):
+                        try:
+                            from authentication.models import Membership
+                            me = Membership.objects.filter(organization_id=folder.organization_id, user=request.user).first()
+                            if not me or me.role not in ('owner', 'admin'):
+                                return Response({'error': '仅组织 owner/admin 或文件夹拥有者可设置公开'}, status=status.HTTP_403_FORBIDDEN)
+                        except Exception:
+                            return Response({'error': '组织信息错误'}, status=status.HTTP_400_BAD_REQUEST)
+            if org is not None:
+                try:
+                    from authentication.models import Membership
+                    me = Membership.objects.filter(organization_id=getattr(org, 'id', org), user=request.user).first()
+                    if not me or me.role not in ('owner', 'admin'):
+                        return Response({'error': '仅 owner/admin 可设置组织关联'}, status=status.HTTP_403_FORBIDDEN)
+                except Exception:
+                    return Response({'error': '组织信息错误'}, status=status.HTTP_400_BAD_REQUEST)
+            if org is not None:
+                folder = serializer.save(organization=org, is_public=bool(is_public) if is_public is not None else folder.is_public)
+            else:
+                folder = serializer.save(is_public=bool(is_public) if is_public is not None else folder.is_public)
             response_serializer = FolderSerializer(folder, context={'request': request})
             return Response(response_serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -943,7 +1179,17 @@ def folder_detail(request, folder_id):
         # 检查文件夹是否为空
         if folder.subfolders.exists() or folder.files.exists():
             return Response({'error': '文件夹不为空，无法删除'}, status=status.HTTP_400_BAD_REQUEST)
-        
+        # 只有拥有者或组织 owner/admin 可删除
+        if folder.user_id != request.user.id:
+            try:
+                from authentication.models import Membership
+                if not folder.organization:
+                    return Response({'error': '无权限删除该文件夹'}, status=status.HTTP_403_FORBIDDEN)
+                me = Membership.objects.filter(organization_id=folder.organization_id, user=request.user).first()
+                if not me or me.role not in ('owner', 'admin'):
+                    return Response({'error': '无权限删除该文件夹'}, status=status.HTTP_403_FORBIDDEN)
+            except Exception:
+                return Response({'error': '无权限删除该文件夹'}, status=status.HTTP_403_FORBIDDEN)
         folder.delete()
         return Response({'message': '文件夹删除成功'}, status=status.HTTP_204_NO_CONTENT)
 
@@ -953,8 +1199,11 @@ def folder_detail(request, folder_id):
 def folder_breadcrumb(request, folder_id):
     """获取文件夹的面包屑导航路径"""
     try:
-        folder = Folder.objects.get(id=folder_id, user=request.user)
+        folder = Folder.objects.get(id=folder_id)
     except Folder.DoesNotExist:
+        return Response({'error': '文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
+    from .permission_utils import can_view_folder
+    if not can_view_folder(request.user, folder):
         return Response({'error': '文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
     
     breadcrumb = []
@@ -974,9 +1223,79 @@ def folder_breadcrumb(request, folder_id):
 @permission_classes([IsAuthenticated])
 def folder_all(request):
     """获取当前用户的所有文件夹"""
-    folders = Folder.objects.filter(user=request.user).order_by('name')
+    folders = Folder.objects.filter(models.Q(user=request.user) | models.Q(organization__memberships__user=request.user)).distinct().order_by('name')
     folder_serializer = FolderSerializer(folders, many=True, context={'request': request})
     
     return Response({
         'folders': folder_serializer.data
     })
+# ---- 文件详情更新（权限/组织/访问级别） ----
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def file_detail(request, file_id):
+    """获取或更新文件的基础信息与访问控制
+
+    更新允许的字段：
+    - access_level: Public/Internal/Restricted
+    - parent_folder: 可移动到有权限访问的文件夹
+    - 组织关联：通过父文件夹的 organization 继承；不直接在 File 上设置组织
+      若移动到一个有关联组织的文件夹，则该文件视为组织内部文件（通常 access_level=Internal）
+    权限：仅文件拥有者可修改；管理员可读取但不修改。
+    """
+    try:
+        f = File.objects.get(id=file_id)
+    except File.DoesNotExist:
+        return Response({'error': '文件不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+    # 仅拥有者允许更新
+    is_owner = getattr(f, 'user_id', None) == getattr(request.user, 'id', None)
+
+    if request.method == 'GET':
+        ser = FileSerializer(f, context={'request': request})
+        return Response(ser.data)
+
+    # PUT
+    if not is_owner and not getattr(request.user, 'is_superuser', False):
+        # 与删除策略保持一致：隐藏资源存在性
+        return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    payload = request.data or {}
+    allowed_fields = {'access_level', 'parent_folder'}
+    data = {k: v for k, v in payload.items() if k in allowed_fields}
+
+    # 校验 parent_folder 可见性
+    parent_folder_id = data.get('parent_folder')
+    parent_folder = None
+    if parent_folder_id:
+        try:
+            parent_folder = Folder.objects.get(id=parent_folder_id)
+        except Folder.DoesNotExist:
+            return Response({'error': '目标文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
+        from .permission_utils import can_view_folder
+        if not can_view_folder(request.user, parent_folder):
+            return Response({'error': '无权限移动到此文件夹'}, status=status.HTTP_403_FORBIDDEN)
+
+    # 访问级别规范化
+    access_level = data.get('access_level')
+    if access_level:
+        access_level = str(access_level).strip()
+        if access_level not in ('Public', 'Internal', 'Restricted'):
+            return Response({'error': '无效的访问级别'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 应用更新
+    if parent_folder is not None:
+        f.parent_folder = parent_folder
+        # 若目标文件夹属于某组织，建议同步为 Internal（如未显式指定）
+        try:
+            if getattr(parent_folder, 'organization', None) and not access_level:
+                access_level = 'Internal'
+        except Exception:
+            pass
+
+    if access_level:
+        f.access_level = access_level
+
+    f.save(update_fields=['parent_folder', 'access_level'])
+    ser = FileSerializer(f, context={'request': request})
+    return Response(ser.data)

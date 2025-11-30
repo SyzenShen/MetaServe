@@ -266,6 +266,7 @@ export default {
   font-size: 1.1rem;
   margin: 0;
   opacity: 0.8;
+  color: var(--waves-text-muted);
 }
 
 .waves-auth-body {
@@ -521,6 +522,7 @@ export default {
 .waves-auth-footer p {
   margin: 0;
   font-size: 1rem;
+  color: var(--waves-text-muted);
 }
 
 .waves-link {

@@ -29,8 +29,8 @@
             <li :class="{ active: $route.path === '/cellxgene-app' }">
               <router-link :to="cellxgeneRoute">Cell Visualization</router-link>
             </li>
-            <!-- 组织管理入口：仅超级用户显示，移动到 Cell Visualization 右侧 -->
-            <li v-if="isSuperuser">
+            <!-- 组织管理入口：超级用户或在任一组织为 owner/admin 均显示 -->
+            <li v-if="canManageOrgs">
               <a href="/api/auth/orgs/ui/">management</a>
             </li>
             <li :class="{ active: $route.path === '/profile' }">
@@ -72,6 +72,12 @@ export default {
     const isAuthenticated = computed(() => authStore.isAuthenticated)
     const currentUser = computed(() => authStore.currentUser)
     const isSuperuser = computed(() => !!authStore.currentUser?.is_superuser)
+    const organizations = computed(() => authStore.myOrganizations || [])
+    const canManageOrgs = computed(() => {
+      if (isSuperuser.value) return true
+      const orgs = organizations.value
+      return orgs.some(o => (o?.role || '').toLowerCase() === 'owner' || (o?.role || '').toLowerCase() === 'admin' || o?.owner_id === authStore.currentUser?.id)
+    })
     const cellxgeneRoute = computed(() => {
       const lastFile = filesStore.lastPublishedCellxgeneFile
       return lastFile
@@ -92,6 +98,8 @@ export default {
       isAuthenticated,
       currentUser,
       isSuperuser,
+      organizations,
+      canManageOrgs,
       cellxgeneRoute,
       handleLogout,
       logoSrc,

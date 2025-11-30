@@ -45,9 +45,9 @@
                 <path d="M10 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.11 2.89 20 4 20H20C21.11 20 22 19.11 22 18V8C22 6.89 21.11 6 20 6H12L10 4Z" fill="currentColor"/>
               </svg>
             </div>
-            <div class="waves-file-info">
+          <div class="waves-file-info">
               <div class="waves-file-name">{{ folder.name }}</div>
-              <div class="waves-file-type">Folder</div>
+              <div class="waves-file-type">Folder<template v-if="getOrganizationNameForFolder(folder)"> · {{ getOrganizationNameForFolder(folder) }}</template></div>
             </div>
           </div>
           <div class="waves-cell waves-size-cell">
@@ -56,30 +56,51 @@
           <div class="waves-cell waves-date-cell">
             <span class="waves-date-text">{{ formatDate(folder.created_at) }}</span>
           </div>
-          <div class="waves-cell waves-action-cell">
-            <div class="waves-action-group">
-              <!-- 占位：与文件行保持同样的第一列，使下载按钮纵向对齐 -->
-              <span class="waves-action-placeholder" aria-hidden="true"></span>
-              <button 
-                class="waves-action-btn waves-download-btn"
-                @click.stop="downloadFolder(folder.id)"
-                title="Download Folder"
-              >
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M5 20H19V18H5M19 9H15V3H9V9H5L12 16L19 9Z" fill="currentColor"/>
-                </svg>
-              </button>
-              <button 
-                class="waves-action-btn waves-delete-btn"
-                @click.stop="deleteFolder(folder.id)"
-                title="Delete Folder"
-              >
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19 4H15.5L14.5 3H9.5L8.5 4H5V6H19M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19Z" fill="currentColor"/>
-                </svg>
-              </button>
-            </div>
+        <div class="waves-cell waves-action-cell">
+          <div class="waves-action-group">
+            <button 
+              class="waves-action-btn waves-download-btn"
+              @click.stop="downloadFolder(folder.id)"
+              title="Download Folder"
+            >
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 20H19V18H5M19 9H15V3H9V9H5L12 16L19 9Z" fill="currentColor"/>
+              </svg>
+            </button>
+            <button
+              class="waves-action-btn waves-share-btn"
+              @click.stop="copyShareLinkForFolder(folder)"
+              title="Share Link"
+            >
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
+                <circle cx="6" cy="12" r="2.5" fill="currentColor"/>
+                <circle cx="18" cy="6" r="2.5" fill="currentColor"/>
+                <circle cx="18" cy="18" r="2.5" fill="currentColor"/>
+                <path d="M7.9 11.2 L15.5 7.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M7.9 12.8 L15.5 16.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <button
+              v-if="folder.parent == null ? (folder.can_manage_permissions || (folder.is_owner && !folder.organization && !folder.is_public)) : (folder.is_owner && !folder.organization && !folder.is_public)"
+              class="waves-action-btn"
+              @click.stop="openPermissionDialog({ type: 'folder', id: folder.id, name: folder.name, organization_name: getOrganizationNameForFolder(folder) })"
+              title="权限设置"
+            >
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 1a2 2 0 012 2v1.07a7.002 7.002 0 013.183 1.318l.758-.757a2 2 0 112.828 2.828l-.757.758A7.002 7.002 0 0119.93 11H21a2 2 0 012 2s0 0 0 0a2 2 0 01-2 2h-1.07a7.002 7.002 0 01-1.318 3.183l.757.758a2 2 0 11-2.828 2.828l-.758-.757A7.002 7.002 0 0114 19.93V21a2 2 0 11-4 0v-1.07a7.002 7.002 0 01-3.183-1.318l-.758.757a2 2 0 11-2.828-2.828l.757-.758A7.002 7.002 0 014.07 14H3a2 2 0 110-4h1.07a7.002 7.002 0 011.318-3.183l-.757-.758a2 2 0 112.828-2.828l.758.757A7.002 7.002 0 0110 4.07V3a2 2 0 012-2zm0 6a5 5 0 100 10A5 5 0 0012 7z" fill="currentColor"/>
+              </svg>
+            </button>
+            <button 
+              class="waves-action-btn waves-delete-btn"
+              @click.stop="deleteFolder(folder.id)"
+              title="Delete Folder"
+            >
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 4H15.5L14.5 3H9.5L8.5 4H5V6H19M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19Z" fill="currentColor"/>
+              </svg>
+            </button>
           </div>
+        </div>
         </div>
         
         <!-- 文件 -->
@@ -87,6 +108,7 @@
           v-for="file in files"
           :key="`file-${file.id}`"
           class="waves-table-row waves-file-row"
+          @click="showFilePreview(file)"
         >
           <div class="waves-cell waves-name-cell">
             <div class="waves-file-icon waves-document-icon">
@@ -96,7 +118,7 @@
             </div>
             <div class="waves-file-info">
               <div class="waves-file-name">{{ file.original_filename }}</div>
-              <div class="waves-file-type">{{ getFileType(file.original_filename) }}</div>
+              <div class="waves-file-type">{{ getFileType(file.original_filename) }}<template v-if="getOrganizationNameForFile(file)"> · {{ getOrganizationNameForFile(file) }}</template></div>
               <!-- 下载进度条（仅在有进度时显示） -->
               <div v-if="downloadProgress[file.id] !== undefined" class="waves-download-progress">
                 <div class="waves-progress-track">
@@ -134,7 +156,6 @@
                   </svg>
                 </button>
               </template>
-              <span v-else class="waves-action-placeholder" aria-hidden="true"></span>
 
               <!-- 下载按钮固定在第二列，实现纵向对齐 -->
               <button 
@@ -144,6 +165,29 @@
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 20H19V18H5M19 9H15V3H9V9H5L12 16L19 9Z" fill="currentColor"/>
+                </svg>
+              </button>
+              <button
+                class="waves-action-btn waves-share-btn"
+                @click.stop="copyShareLinkForFile(file)"
+                title="Share Link"
+              >
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
+                  <circle cx="6" cy="12" r="2.5" fill="currentColor"/>
+                  <circle cx="18" cy="6" r="2.5" fill="currentColor"/>
+                  <circle cx="18" cy="18" r="2.5" fill="currentColor"/>
+                  <path d="M7.9 11.2 L15.5 7.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M7.9 12.8 L15.5 16.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <button
+                v-if="file.is_owner && !(currentFolder && (currentFolder.is_public || currentFolder.organization))"
+                class="waves-action-btn"
+                @click.stop="openPermissionDialog({ type: 'file', id: file.id, name: file.original_filename, organization_name: getOrganizationNameForFile(file) })"
+                title="权限设置"
+              >
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 1a2 2 0 012 2v1.07a7.002 7.002 0 013.183 1.318l.758-.757a2 2 0 112.828 2.828l-.757.758A7.002 7.002 0 0119.93 11H21a2 2 0 012 2s0 0 0 0a2 2 0 01-2 2h-1.07a7.002 7.002 0 01-1.318 3.183l.757.758a2 2 0 11-2.828 2.828l-.758-.757A7.002 7.002 0 0114 19.93V21a2 2 0 11-4 0v-1.07a7.002 7.002 0 01-3.183-1.318l-.758.757a2 2 0 11-2.828-2.828l.757-.758A7.002 7.002 0 014.07 14H3a2 2 0 110-4h1.07a7.002 7.002 0 011.318-3.183l-.757-.758a2 2 0 112.828-2.828l.758.757A7.002 7.002 0 0110 4.07V3a2 2 0 012-2zm0 6a5 5 0 100 10A5 5 0 0012 7z" fill="currentColor"/>
                 </svg>
               </button>
               <!-- 下载控制：暂停/继续/取消 -->
@@ -174,6 +218,7 @@
               </template>
               <button 
                 class="waves-action-btn waves-delete-btn"
+                v-if="file.can_delete"
                 @click.stop="deleteFile(file.id)"
                 title="Delete File"
               >
@@ -204,8 +249,6 @@
               </svg>
             </div>
             <div class="waves-item-actions">
-              <!-- 占位：与文件卡保持同样的第一列，使下载按钮纵向对齐 -->
-              <span class="waves-action-placeholder" aria-hidden="true"></span>
               <button 
                 class="waves-action-btn waves-download-btn"
                 @click.stop="downloadFolder(folder.id)"
@@ -213,6 +256,19 @@
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 20H19V18H5M19 9H15V3H9V9H5L12 16L19 9Z" fill="currentColor"/>
+                </svg>
+              </button>
+              <button
+                class="waves-action-btn waves-share-btn"
+                @click.stop="copyShareLinkForFolder(folder)"
+                title="Share Link"
+              >
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
+                  <circle cx="6" cy="12" r="2.5" fill="currentColor"/>
+                  <circle cx="18" cy="6" r="2.5" fill="currentColor"/>
+                  <circle cx="18" cy="18" r="2.5" fill="currentColor"/>
+                  <path d="M7.9 11.2 L15.5 7.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M7.9 12.8 L15.5 16.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
               </button>
               <button 
@@ -229,7 +285,7 @@
           <div class="waves-card-body">
             <div class="waves-item-name">{{ folder.name }}</div>
             <div class="waves-item-meta">
-              <span class="waves-item-type">Folder</span>
+              <span class="waves-item-type">Folder<template v-if="getOrganizationNameForFolder(folder)"> · {{ getOrganizationNameForFolder(folder) }}</template></span>
               <span class="waves-item-size">{{ formatFileSize(folder.folder_size) }}</span>
               <span class="waves-item-date">{{ formatDate(folder.created_at) }}</span>
             </div>
@@ -241,6 +297,7 @@
           v-for="file in files"
           :key="`file-${file.id}`"
           class="waves-grid-item waves-file-card"
+          @click="showFilePreview(file)"
         >
           <div class="waves-card-header">
             <div class="waves-item-icon waves-document-icon">
@@ -249,7 +306,6 @@
               </svg>
             </div>
             <div class="waves-item-actions">
-              <!-- 先显示 Cellxgene（仅 .h5ad 有），否则用占位保持下载按钮纵向对齐 -->
               <template v-if="isH5ad(file.original_filename)">
                 <button 
                   class="waves-action-btn waves-cellxgene-btn"
@@ -269,7 +325,6 @@
                   </svg>
                 </button>
               </template>
-              <span v-else class="waves-action-placeholder" aria-hidden="true"></span>
 
               <!-- 下载按钮固定在第二列，实现纵向对齐 -->
               <button 
@@ -279,6 +334,19 @@
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M5 20H19V18H5M19 9H15V3H9V9H5L12 16L19 9Z" fill="currentColor"/>
+                </svg>
+              </button>
+              <button 
+                class="waves-action-btn waves-share-btn"
+                @click.stop="copyShareLinkForFile(file)"
+                title="Share Link"
+              >
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
+                  <circle cx="6" cy="12" r="2.5" fill="currentColor"/>
+                  <circle cx="18" cy="6" r="2.5" fill="currentColor"/>
+                  <circle cx="18" cy="18" r="2.5" fill="currentColor"/>
+                  <path d="M7.9 11.2 L15.5 7.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M7.9 12.8 L15.5 16.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
               </button>
               <button 
@@ -295,7 +363,7 @@
           <div class="waves-card-body">
             <div class="waves-item-name" :title="file.original_filename">{{ file.original_filename }}</div>
             <div class="waves-item-meta">
-              <span class="waves-item-type">{{ getFileType(file.original_filename) }}</span>
+              <span class="waves-item-type">{{ getFileType(file.original_filename) }}<template v-if="getOrganizationNameForFile(file)"> · {{ getOrganizationNameForFile(file) }}</template></span>
               <span class="waves-item-size">{{ formatFileSize(file.file_size) }}</span>
               <span class="waves-item-date">{{ formatDate(file.uploaded_at) }}</span>
             </div>
@@ -303,7 +371,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 空状态 -->
     <div v-if="isEmpty" class="waves-empty-state">
       <div class="waves-empty-icon">
@@ -330,42 +398,85 @@
         </div>
       </div>
     </div>
+
+    <FilePreviewModal
+      v-if="showPreviewModal"
+      :file="selectedFile"
+      @close="closePreview"
+    />
+
+    <!-- Permission Settings Dialog -->
+    <div v-if="permissionState.visible" class="dialog-backdrop" @click="closePermissionDialog">
+      <div class="dialog" @click.stop>
+        <h3 class="dialog-title">Permission Settings</h3>
+        <p class="dialog-desc">Target: {{ permissionState.targetName }}</p>
+        <div class="form-group">
+          <label>{{ permissionState.targetType==='folder' ? 'Managing Entity' : 'File Ownership' }}</label>
+          <select v-model="permissionState.selectedScope" class="form-control">
+            <option value="public">Public (accessible to any logged-in user)</option>
+            <option value="personal">Personal</option>
+            <option v-for="o in permissionState.orgs" :key="o.id" :value="`org:${o.id}`">
+              Organization: {{ o.name }}
+            </option>
+          </select>
+        </div>
+        <p v-if="permissionState.error" class="status error">{{ permissionState.error }}</p>
+        <div class="dialog-actions">
+          <button class="btn" @click="submitPermission" :disabled="permissionState.submitting">Save</button>
+          <button class="btn cancel" @click="closePermissionDialog" :disabled="permissionState.submitting">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFilesStore } from '../stores/files'
+import axios from 'axios'
+import FilePreviewModal from './FilePreviewModal.vue'
 
 const filesStore = useFilesStore()
 const router = useRouter()
 
-// 仅当后缀为 .h5ad 时显示“发送到 Cellxgene”
+// Show "Send to Cellxgene" only for .h5ad files
 const isH5ad = (name) => {
   const n = (name || '').toLowerCase()
   return n.endsWith('.h5ad')
 }
 
-// 计算属性
+// Computed
 const viewMode = computed(() => filesStore.viewMode)
 const folders = computed(() => filesStore.currentFolders)
 const files = computed(() => filesStore.currentFiles)
+const currentFolder = computed(() => filesStore.currentFolder)
 const isEmpty = computed(() => folders.value.length === 0 && files.value.length === 0)
-// 下载相关状态（来自 Pinia store）
+// Download states from Pinia store
 const downloadProgress = computed(() => filesStore.downloadProgress)
 const downloadPaused = computed(() => filesStore.downloadPaused)
 const downloadActive = computed(() => filesStore.downloadActive)
 
-// 方法
+// Methods
 const navigateToFolder = (folderId) => {
   filesStore.navigateToFolder(folderId)
 }
 
+const showPreviewModal = ref(false)
+const selectedFile = ref(null)
+const showFilePreview = (file) => {
+  selectedFile.value = file
+  showPreviewModal.value = true
+}
+const closePreview = () => {
+  showPreviewModal.value = false
+  selectedFile.value = null
+}
+
 const deleteFolder = async (folderId) => {
-  // 使用 Promise 包装确认对话框，确保真正的同步行为
+  // Wrap confirm dialog in Promise to ensure true sync behavior
   const confirmed = await new Promise((resolve) => {
-    // 使用 setTimeout 确保在下一个事件循环中显示对话框
+    // Use setTimeout to show dialog in next event loop tick
     setTimeout(() => {
       const result = confirm('Are you sure you want to delete this folder?')
       resolve(result)
@@ -383,9 +494,9 @@ const deleteFolder = async (folderId) => {
 }
 
 const deleteFile = async (fileId) => {
-  // 使用 Promise 包装确认对话框，确保真正的同步行为
+  // Wrap confirm dialog in Promise to ensure true sync behavior
   const confirmed = await new Promise((resolve) => {
-    // 使用 setTimeout 确保在下一个事件循环中显示对话框
+    // Use setTimeout to show dialog in next event loop tick
     setTimeout(() => {
       const result = confirm('Are you sure you want to delete this file?')
       resolve(result)
@@ -407,19 +518,19 @@ const downloadFile = async (file, retryCount = 0) => {
   const retryDelay = 1000 * (retryCount + 1) // 递增延迟
 
   try {
-    // 获取token
+    // Get token
     const token = localStorage.getItem('token')
     if (!token) {
       filesStore.showErrorNotification('Please log in first')
       return
     }
 
-    // 显示下载开始提示
+    // Show download start notification
     if (retryCount === 0) {
       filesStore.showDownloadNotification(`Starting download: ${file.original_filename || file.name || `file_${file.id}`}`)
     }
 
-    // 检查文件大小，大文件使用store中的断点续传下载
+    // For large files use breakpoint-resume download in store
     if (file.file_size && file.file_size > 50 * 1024 * 1024) { // 50MB以上
       const result = await filesStore.downloadFile(file.id, file.original_filename || `file_${file.id}`, file.file_size)
       if (!result.success) {
@@ -428,11 +539,11 @@ const downloadFile = async (file, retryCount = 0) => {
       return
     }
 
-    // 使用fetch进行带认证的下载，添加超时控制
+    // Use fetch with auth and add timeout control
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 30000) // 30秒超时
 
-    const response = await fetch(`http://localhost:8000/api/files/${file.id}/download/`, {
+    const response = await fetch(`/api/files/${file.id}/download/`, {
       method: 'GET',
       headers: {
         'Authorization': `Token ${token}`
@@ -443,12 +554,12 @@ const downloadFile = async (file, retryCount = 0) => {
     clearTimeout(timeoutId)
 
     if (!response.ok) {
-      // 检查是否是认证问题
+      // Check for auth issues
       if (response.status === 401) {
         filesStore.showErrorNotification('Session expired, please log in again')
         return
       }
-      // 检查是否是文件不存在
+      // Check for file not found
       if (response.status === 404) {
         filesStore.showErrorNotification('File not found or has been removed')
         return
@@ -456,22 +567,22 @@ const downloadFile = async (file, retryCount = 0) => {
       throw new Error(`Download failed: ${response.status} ${response.statusText}`)
     }
 
-    // 检查响应内容类型，避免下载错误页面
+    // Check response content type to avoid downloading error page
     const contentType = response.headers.get('content-type') || ''
     if (contentType.includes('text/html') || contentType.includes('application/json')) {
       const errorText = await response.text()
       throw new Error(errorText || 'Server returned an error page')
     }
 
-    // 获取文件blob
+    // Get file blob
     const blob = await response.blob()
     
-    // 检查blob大小，避免下载空文件
+    // Check blob size to avoid empty files
     if (blob.size === 0) {
       throw new Error('Downloaded file is empty')
     }
     
-    // 创建下载链接
+    // Create download link
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -480,13 +591,13 @@ const downloadFile = async (file, retryCount = 0) => {
     link.click()
     document.body.removeChild(link)
     
-    // 清理URL对象
+    // Revoke object URL
     window.URL.revokeObjectURL(url)
     
   } catch (error) {
     console.error(`Download failed (attempt ${retryCount + 1}/${maxRetries + 1}):`, error)
     
-    // 检查是否是网络错误且可以重试
+    // Check if network error and can retry
     const isNetworkError = error.name === 'AbortError' || 
                           error.message.includes('fetch') || 
                           error.message.includes('network') ||
@@ -500,7 +611,7 @@ const downloadFile = async (file, retryCount = 0) => {
       return
     }
     
-    // 显示用户友好的错误信息
+    // Show user-friendly error message
     let errorMessage = error.message
     if (error.name === 'AbortError') {
       errorMessage = 'Download timed out, please check your network'
@@ -512,7 +623,102 @@ const downloadFile = async (file, retryCount = 0) => {
   }
 }
 
-// 下载控制：暂停/继续/取消（委托给 store）
+// Permission dialog state and methods
+const permissionState = reactive({
+  visible: false,
+  targetType: null, // 'file' | 'folder'
+  targetId: null,
+  targetName: '',
+  currentOrg: null,
+  accessLevel: 'Internal',
+  orgs: [],
+  selectedScope: 'personal',
+  submitting: false,
+  error: ''
+})
+
+const openPermissionDialog = (target) => {
+  permissionState.visible = true
+  permissionState.targetType = target.type
+  permissionState.targetId = target.id
+  permissionState.targetName = target.name
+  permissionState.currentOrg = target.organization_name || null
+  permissionState.error = ''
+  // Default scope based on current folder organization
+  permissionState.selectedScope = 'personal'
+  if (permissionState.targetType === 'folder') {
+    const cf = currentFolder.value
+    if (cf?.is_public) permissionState.selectedScope = 'public'
+    else if (cf?.organization) permissionState.selectedScope = `org:${cf.organization}`
+    else permissionState.selectedScope = 'personal'
+  } else {
+    const cf = currentFolder.value
+    if (cf?.is_public) permissionState.selectedScope = 'public'
+    else if (cf?.organization) permissionState.selectedScope = `org:${cf.organization}`
+    else permissionState.selectedScope = 'personal'
+  }
+  // Fetch organizations
+  fetchMyOrganizations()
+}
+
+const closePermissionDialog = () => {
+  if (permissionState.submitting) return
+  permissionState.visible = false
+}
+
+async function fetchMyOrganizations(){
+  try{
+    const res = await axios.get('/api/auth/orgs/')
+    const all = res.data?.organizations || []
+    const meId = (window.__currentUser && window.__currentUser.id) || null
+    permissionState.orgs = all.filter(o => (o.role === 'owner') || (meId && o.owner_id === meId))
+  }catch(e){
+    permissionState.orgs = []
+  }
+}
+
+async function submitPermission(){
+  if (permissionState.submitting) return
+  permissionState.submitting = true
+  permissionState.error = ''
+  try{
+    const scope = permissionState.selectedScope
+    if (permissionState.targetType === 'folder'){
+      // Public vs Personal/Organization
+      let body = {}
+      if (scope === 'public') {
+        body = { is_public: true, organization: null }
+      } else if (scope === 'personal') {
+        body = { is_public: false, organization: null }
+      } else if (scope.startsWith('org:')) {
+        const orgId = scope.split(':')[1]
+        body = { is_public: false, organization: Number(orgId) }
+      }
+      const url = `/api/files/folders/${permissionState.targetId}/`
+      await axios.put(url, body)
+      await filesStore.fetchFiles(filesStore.currentFolderId)
+    } else {
+      // Files: same logic as folders
+      if (scope === 'public') {
+        const url = `/api/files/${permissionState.targetId}/`
+        await axios.put(url, { access_level: 'Public' })
+      } else {
+        // personal or org:xxx -> Internal; organization determined by parent folder
+        const url = `/api/files/${permissionState.targetId}/`
+        await axios.put(url, { access_level: 'Internal' })
+      }
+      await filesStore.fetchFiles(filesStore.currentFolderId)
+    }
+    permissionState.visible = false
+  }catch(e){
+    const msg = e?.response?.data?.error || e?.response?.data?.detail || e?.message || 'Update failed'
+    permissionState.error = msg
+  }finally{
+    permissionState.submitting = false
+  }
+}
+
+// Download controls: pause/resume/cancel (delegated to store)
 const pauseDownload = (fileId) => {
   try { filesStore.pauseDownload(fileId) } catch (_) {}
 }
@@ -521,6 +727,43 @@ const resumeDownload = async (fileId, filename, fileSize) => {
 }
 const cancelDownload = async (fileId) => {
   try { await filesStore.cancelDownload(fileId) } catch (_) {}
+}
+
+const copyText = async (text) => {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch (_) {}
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.top = '-1000px'
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(ta)
+    return ok
+  } catch (_) {
+    return false
+  }
+}
+
+const copyShareLinkForFile = async (file) => {
+  const origin = window.location.origin
+  const link = `${origin}/download?file=${file.id}`
+  const ok = await copyText(link)
+  filesStore.showDownloadNotification(ok ? 'Share link copied' : 'Copy failed')
+}
+
+const copyShareLinkForFolder = async (folder) => {
+  const origin = window.location.origin
+  const link = `${origin}/download?folder=${folder.id}`
+  const ok = await copyText(link)
+  filesStore.showDownloadNotification(ok ? 'Share link copied' : 'Copy failed')
 }
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
@@ -556,9 +799,9 @@ const waitForCellxgeneReady = async (datasetFileName, timeout = 60000, interval 
   throw new Error('Cellxgene loading timed out, please try again later')
 }
 
-// 发送到 Cellxgene 并跳转预览页
+// Send to Cellxgene and navigate to preview page
 const sendToCellxgene = async (file) => {
-  console.log('开始发送到 Cellxgene...', file)
+  console.log('Start sending to Cellxgene...', file)
   const name = file.original_filename || ''
   if (!name.toLowerCase().endsWith('.h5ad')) {
     filesStore.showErrorNotification('Only .h5ad files can be sent to Cellxgene')
@@ -566,14 +809,14 @@ const sendToCellxgene = async (file) => {
     return
   }
 
-  console.log(`正在调用 publishToCellxgene，文件ID: ${file.id}`)
+  console.log(`Calling publishToCellxgene, file ID: ${file.id}`)
   try {
     filesStore.showLoadingOverlay('Sending file to Cellxgene...')
     const result = await filesStore.publishToCellxgene(file.id)
-    console.log('publishToCellxgene 调用结果:', result)
+    console.log('publishToCellxgene result:', result)
 
     if (result && result.success) {
-      // 后端会返回已复制到 Cellxgene 数据目录中的实际文件名（包含安全前缀）
+      // Backend returns actual filename copied to Cellxgene data dir (with safe prefix)
       const publishedFile = result.data?.published_file
       const fallbackName = name.split('/').pop() || name
       const fileNameForPreview = publishedFile || fallbackName
@@ -591,7 +834,7 @@ const sendToCellxgene = async (file) => {
     filesStore.showErrorNotification(waitError.message || 'Cellxgene load timeout')
         return
       }
-      // 跳转到包装页进行预览，并传递实际文件名参数
+      // Navigate to wrapper page for preview, pass actual filename
       router.push({
         path: '/cellxgene-app',
         query: { file: fileNameForPreview }
@@ -610,38 +853,44 @@ const sendToCellxgene = async (file) => {
 
 const downloadFolder = async (folderId) => {
   try {
-    // 获取token
+    // Get token
     const token = localStorage.getItem('token')
     if (!token) {
       alert('Please log in first')
       return
     }
 
-    // 使用fetch进行带认证的文件夹下载
-    const response = await fetch(`http://localhost:8000/file_download/download/folder/${folderId}/`, {
+    // Use fetch for authenticated folder download
+    const response = await fetch(`/file_download/download/folder/${folderId}/`, {
       method: 'GET',
       headers: {
-        'Authorization': `Token ${token}`
+        'Authorization': `Token ${token}`,
+        'Accept': 'application/zip'
       }
     })
 
     if (!response.ok) {
-      throw new Error(`Download failed: ${response.status} ${response.statusText}`)
+      if (response.status === 401) {
+        alert('Session expired, please log in again')
+        return
+      }
+      const text = await response.text().catch(() => '')
+      throw new Error(`Download failed: ${response.status} ${response.statusText}${text ? ' - ' + text : ''}`)
     }
 
-    // 获取文件blob
+    // Get file blob
     const blob = await response.blob()
     
-    // 创建下载链接
+    // Create download link
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `folder_${folderId}.zip` // 文件夹下载通常是ZIP格式
+    link.download = `folder_${folderId}.zip` // folder download usually ZIP
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     
-    // 清理URL对象
+    // Revoke object URL
     window.URL.revokeObjectURL(url)
   } catch (error) {
     console.error('Folder download failed:', error)
@@ -690,6 +939,22 @@ const getFileType = (filename) => {
   }
   
   return typeMap[ext] || 'Unknown File'
+}
+
+const getOrganizationNameForFile = (file) => {
+  const cf = currentFolder.value
+  if (cf && cf.organization_name) return cf.organization_name
+  const pid = file?.parent_folder
+  if (pid) {
+    const f = folders.value.find(x => x.id === pid)
+    return f?.organization_name || null
+  }
+  return null
+}
+
+const getOrganizationNameForFolder = (folder) => {
+  if (folder?.is_public) return 'Public'
+  return folder?.organization_name || null
 }
 </script>
 
@@ -749,8 +1014,8 @@ const getFileType = (filename) => {
 }
 
 .waves-action-cell {
-  width: 120px;
-  justify-content: center;
+  width: 140px;
+  justify-content: flex-start;
 }
 
 .waves-table-content {
@@ -790,9 +1055,11 @@ const getFileType = (filename) => {
 }
 
 .waves-cell.waves-size-cell,
-.waves-cell.waves-date-cell,
-.waves-cell.waves-action-cell {
+.waves-cell.waves-date-cell {
   justify-content: center;
+}
+.waves-cell.waves-action-cell {
+  justify-content: flex-start;
 }
 
 .waves-file-icon {
@@ -868,8 +1135,9 @@ const getFileType = (filename) => {
 
 .waves-action-group {
   display: flex;
-  gap: 0.5rem;
-  opacity: 1; /* 始终显示浅色按钮 */
+  gap: 0.25rem;
+  margin-left: -12px;
+  opacity: 1;
   transition: opacity 0.3s ease;
 }
 
@@ -887,7 +1155,7 @@ const getFileType = (filename) => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   background: var(--waves-surface-secondary);
   color: var(--waves-text-secondary);
 }
@@ -907,6 +1175,22 @@ const getFileType = (filename) => {
   width: 32px;
   height: 32px;
   display: inline-block;
+}
+
+.waves-action-btn:not(.waves-download-btn):not(.waves-delete-btn):not(.waves-cellxgene-btn):not(.waves-share-btn):hover {
+  background: var(--primary, #2563eb);
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.waves-share-btn {
+  background: var(--waves-surface-secondary);
+  color: var(--waves-text-secondary);
+}
+.waves-share-btn:hover {
+  background: #5b21b6;
+  color: #fff;
+  transform: scale(1.1);
 }
 
 .waves-download-btn:hover {
@@ -1022,7 +1306,8 @@ const getFileType = (filename) => {
 
 .waves-item-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  margin-left: -12px;
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -1241,8 +1526,77 @@ const getFileType = (filename) => {
   }
   
   .waves-card-header,
-  .waves-card-body {
-    padding: 0.75rem;
-  }
+.waves-card-body {
+  padding: 0.75rem;
+}
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: #ffffff;
+  border-radius: 8px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.dialog-title {
+  margin: 0 0 8px 0;
+  font-weight: 600;
+  color: var(--waves-text-primary);
+}
+
+.dialog-desc {
+  margin: 0 0 12px 0;
+  color: var(--waves-text-secondary);
+}
+
+.dialog .form-group {
+  margin: 12px 0;
+}
+
+.dialog .form-control {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.dialog-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.dialog .btn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--waves-border-light);
+  background: var(--waves-surface-secondary);
+  color: var(--waves-text-primary);
+  transition: all 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(27, 44, 72, 0.12);
+}
+
+.dialog .btn:hover {
+  background: var(--waves-surface-primary);
+  border-color: var(--waves-primary-300);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(27, 44, 72, 0.16);
+}
+
+.dialog .btn.cancel {
+  color: var(--waves-text-secondary);
 }
 </style>

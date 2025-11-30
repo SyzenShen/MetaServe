@@ -19,6 +19,17 @@ export default defineConfig({
         // 保留 /api 前缀，后端以 /api 开头
         secure: false
       },
+      // 文件下载服务：将 /file_download/* 代理到后端
+      '/file_download/': {
+        target: 'http://localhost:8020',
+        changeOrigin: true,
+        secure: false
+      },
+      '/file_download': {
+        target: 'http://localhost:8020',
+        changeOrigin: true,
+        secure: false
+      },
       // 仅匹配以 /cellxgene/ 开头的路径，避免误匹配 /cellxgene-app
       '/cellxgene/': {
         target: 'http://localhost:5005',

@@ -68,6 +68,21 @@
       
       <!-- 对话框底部 -->
       <div class="waves-dialog-footer">
+        <div v-if="allowedOrganizations.length && !effectiveParentOrgId" class="waves-org-select">
+          <label class="waves-form-label">
+            <span class="waves-label-text">Organization</span>
+          </label>
+          <select v-model="selectedOrgId" class="waves-form-control">
+            <option :value="null">Personal</option>
+            <option v-for="org in allowedOrganizations" :key="org.id" :value="org.id">{{ org.name }}</option>
+          </select>
+        </div>
+        <div v-else-if="effectiveParentOrgId" class="waves-org-select">
+          <label class="waves-form-label">
+            <span class="waves-label-text">Organization</span>
+          </label>
+          <input class="waves-form-control" :value="effectiveParentOrgName" disabled />
+        </div>
         <button @click="$emit('close')" class="waves-btn waves-btn-secondary">
           Cancel
         </button>
@@ -84,28 +99,64 @@
 </template>
 
 <script>
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import axios from 'axios'
 import { useFilesStore } from '../stores/files'
+import { useAuthStore } from '../stores/auth'
 
 export default {
   name: 'NewFolderDialog',
   emits: ['close'],
   setup(props, { emit }) {
     const filesStore = useFilesStore()
+    const authStore = useAuthStore()
     const folderName = ref('')
     const creating = ref(false)
     const nameInput = ref(null)
     const hasError = ref(false)
     const errorMessage = ref('')
+    const selectedOrgId = ref(null)
     
     const currentFolderId = computed(() => filesStore.currentFolderId)
+    const organizations = computed(() => authStore.myOrganizations || [])
+    const allowedOrganizations = computed(() => (organizations.value || []).filter(o => ['owner','admin'].includes(o.role)))
+    const currentParentOrgId = computed(() => {
+      const cf = filesStore.currentFolder
+      return cf ? (cf.organization || null) : null
+    })
+    const parentOrgName = computed(() => {
+      const cf = filesStore.currentFolder
+      return cf ? (cf.organization_name || '') : ''
+    })
+
+    const ensuredParentOrgId = ref(null)
+    const ensuredParentOrgName = ref('')
+    const effectiveParentOrgId = computed(() => currentParentOrgId.value || ensuredParentOrgId.value || null)
+    const effectiveParentOrgName = computed(() => parentOrgName.value || ensuredParentOrgName.value || '')
     
+    const ensureOrgFolderInfo = async () => {
+      try {
+        const id = currentFolderId.value
+        if (!id) return
+        const token = localStorage.getItem('token')
+        const headers = token ? { Authorization: `Token ${token}` } : {}
+        const res = await axios.get(`/api/files/folders/${id}/`, { headers })
+        const cf = res.data || {}
+        if (cf && (cf.organization || cf.organization_name)) {
+          ensuredParentOrgId.value = cf.organization || null
+          ensuredParentOrgName.value = cf.organization_name || ''
+        }
+      } catch (_) {}
+    }
+
     onMounted(() => {
-      // 自动聚焦到输入框
+      
       nextTick(() => {
         nameInput.value?.focus()
       })
+      ensureOrgFolderInfo()
     })
+    watch(currentFolderId, () => { ensureOrgFolderInfo() })
     
     const validateInput = () => {
       const name = folderName.value.trim()
@@ -158,7 +209,8 @@ export default {
       try {
         const result = await filesStore.createFolder(
           folderName.value.trim(),
-          currentFolderId.value
+          currentFolderId.value,
+          effectiveParentOrgId.value || selectedOrgId.value || null
         )
         
         if (result.success) {
@@ -175,17 +227,23 @@ export default {
       }
     }
     
-    return {
-      folderName,
-      creating,
-      nameInput,
-      hasError,
-      errorMessage,
-      currentFolderId,
-      validateInput,
-      clearInput,
-      createFolder
-    }
+      return {
+        folderName,
+        creating,
+        nameInput,
+        hasError,
+        errorMessage,
+        currentFolderId,
+        allowedOrganizations,
+        selectedOrgId,
+        currentParentOrgId,
+        parentOrgName,
+        effectiveParentOrgId,
+        effectiveParentOrgName,
+        validateInput,
+        clearInput,
+        createFolder
+      }
   }
 }
 </script>

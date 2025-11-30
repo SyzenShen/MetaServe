@@ -22,7 +22,7 @@
       <td>{{ o.name }}</td>
       <td>
         <a class="btn btn-default btn-sm" href="{% url 'org_members_page' o.id %}">Manage Members</a>
-        {% if o.my_role == 'owner' %}
+        {% if o.my_role == 'owner' or o.owner_id == request.user.id %}
         <form action="" method="post" style="display:inline-block; margin-left:8px;">
           {% csrf_token %}
           <input type="hidden" name="action" value="delete">

@@ -361,14 +361,15 @@ export const useFilesStore = defineStore('files', {
         
         return { success: true, message: '文件删除成功' }
       } catch (error) {
-        const message = error.response?.data?.message 
-          || error.response?.data?.error 
-          || error.response?.data?.detail 
+        const status = error?.response?.status
+        let message = error?.response?.data?.message 
+          || error?.response?.data?.error 
+          || error?.response?.data?.detail 
           || '文件删除失败'
-        // 若后端返回404，提示更友好
-        if (error.response?.status === 404) {
-          this.error = '文件不存在或无权限删除'
-          return { success: false, error: this.error }
+        if (status === 404) {
+          message = '文件不存在或无权限删除'
+        } else if (status === 403) {
+          message = '无权限删除该文件'
         }
         this.error = message
         return { success: false, error: message }
@@ -404,7 +405,7 @@ export const useFilesStore = defineStore('files', {
     },
 
     // 文件夹相关方法
-    async createFolder(name, parentFolderId = null) {
+    async createFolder(name, parentFolderId = null, organizationId = null) {
       try {
         const token = localStorage.getItem('token')
         const headers = token ? { Authorization: `Token ${token}` } : {}
@@ -412,6 +413,9 @@ export const useFilesStore = defineStore('files', {
         const data = { name }
         if (parentFolderId) {
           data.parent = parentFolderId
+        }
+        if (organizationId) {
+          data.organization = organizationId
         }
         
         const response = await axios.post('/api/files/folders/', data, { headers })
@@ -638,55 +642,21 @@ export const useFilesStore = defineStore('files', {
           await writable.close()
           writable = null
         } else {
-          // 不支持文件系统访问 API 的回退：开始请求即视为下载中
+          // 不支持文件系统访问 API 的回退：直接打开下载链接，借助浏览器下载管理
           this.downloadActive[fileId] = true
-          if ((fileSize || 0) >= ONE_GB) {
-            this.error = '当前浏览器不支持断点续传，请使用最新的 Chromium 内核浏览器（如 Chrome）。'
-            return { success: false, error: this.error }
+          const token = localStorage.getItem('token') || ''
+          const url = token ? `/api/files/${fileId}/download/?token=${encodeURIComponent(token)}` : `/api/files/${fileId}/download/`
+          const w = window.open(url, '_blank')
+          if (!w) {
+            // 若被拦截（如浏览器阻止弹窗），降级为创建隐形链接触发
+            const a = document.createElement('a')
+            a.href = url
+            a.download = filename || ''
+            a.style.display = 'none'
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
           }
-          // Fallback: 使用XHR（axios）下载Blob，同时尝试显示下载进度
-          const token = localStorage.getItem('token')
-          const response = await axios.get(`/api/files/${fileId}/download/`, {
-            responseType: 'blob',
-            headers: token ? { Authorization: `Token ${token}` } : undefined,
-            signal: controller.signal,
-            onDownloadProgress: (progressEvent) => {
-              // 暂停/取消时不再更新百分比
-              if (this.downloadPauseRequested[fileId] || this.downloadCancelRequested[fileId]) return
-              const loaded = progressEvent.loaded || 0
-              const total = progressEvent.total || fileSize || 0
-              if (total) {
-                this.downloadProgress[fileId] = Math.round((loaded * 100) / total)
-              }
-            }
-          })
-          // 若返回体大小为 0，则判定为失败，避免保存空文件
-          if (response?.data && typeof response.data.size === 'number' && response.data.size === 0) {
-            throw new Error('下载失败，返回空文件')
-          }
-          // 检查返回的 Blob 类型，避免保存 HTML/JSON
-          const blobType = response.data?.type || ''
-          if (/text\/html/i.test(blobType) || /application\/json/i.test(blobType)) {
-            // 尝试读取错误信息
-            try {
-              const reader = new FileReader()
-              const text = await new Promise((resolve) => {
-                reader.onload = () => resolve(reader.result)
-                reader.readAsText(response.data)
-              })
-              throw new Error(typeof text === 'string' && text.length ? text : '下载失败，返回错误页面')
-            } catch (e) {
-              throw new Error('下载失败，返回错误页面')
-            }
-          }
-          const url = window.URL.createObjectURL(new Blob([response.data]))
-          const link = document.createElement('a')
-          link.href = url
-          link.setAttribute('download', filename)
-          document.body.appendChild(link)
-          link.click()
-          link.remove()
-          window.URL.revokeObjectURL(url)
         }
         cleanup('success')
         delete this.downloadHandles[fileId]

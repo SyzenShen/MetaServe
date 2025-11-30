@@ -86,4 +86,9 @@ stop_one "后端" "$PID_DIR/backend.pid"
 kill_by_port "前端" "$FRONTEND_PORT"
 kill_by_port "后端" "$BACKEND_PORT"
 
+# 额外清理常见测试/预览端口
+for extra_port in 5174 5175 5176 8001 8007 8008 8010; do
+  kill_by_port "额外端口" "$extra_port"
+done
+
 echo "已执行关闭操作；若仍存在端口占用，可手动检查进程。"

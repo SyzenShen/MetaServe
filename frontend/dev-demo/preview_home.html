@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home Unauth Preview</title>
+  <link rel="stylesheet" href="../src/style.css" />
+  <style>
+    /* Mirror Home.vue unauth two-column layout */
+    .waves-corporate-bg {
+      --waves-corporate-gradient: linear-gradient(180deg, #0b1e2d 0%, #133a5c 60%, #1e4e78 100%);
+      background: var(--waves-corporate-gradient);
+      min-height: 100vh;
+      position: relative;
+      color: #fff;
+      isolation: isolate;
+    }
+    .home-bleed { width: 100vw; background: url('../src/views/image.png') center/cover no-repeat; }
+    .unauth-overlay { position: absolute; top: 0; right: 0; bottom: 0; width: clamp(420px, 36vw, 560px); background: rgba(255, 255, 255, 0.12); border-left: 1px solid rgba(255, 255, 255, 0.25); z-index: 0; pointer-events: none; }
+    .page-center.container { position: relative; z-index: 1; min-height: calc(100vh - 0px); display:flex; align-items:center; justify-content:center; padding: 0; width: 100vw; margin: 0; }
+    .unauth-layout { position: relative; display: grid; grid-template-columns: 1fr clamp(420px, 36vw, 560px); align-items: center; justify-items: center; gap: 0; width: 100%; min-height: 100vh; }
+    .unauth-left { display: flex; align-items: center; justify-self: start; padding-left: min(2vw, 40px); }
+    .brand-card { background: rgba(12,22,34,0.35); border: 1px solid rgba(255,255,255,0.22); border-radius: 12px; padding: 36px 44px; box-shadow: 0 6px 22px rgba(0,0,0,0.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); max-width: 520px; transform: translate(-240px, -180px); }
+    .brand-title { font-size: 3.2rem; font-weight: 700; margin-bottom: 8px; color: #ffffff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.18); }
+    .brand-subtitle { font-size: 1rem; margin: 0; color: #e5e5e5; text-shadow: 0 0 6px rgba(255, 255, 255, 0.16); }
+    .unauth-right { position: relative; display: flex; align-items: center; justify-content: center; padding: 0 20px 0 0; }
+  .auth-card { transform: none; width: clamp(360px, 32vw, 520px); border-radius: 12px; }
+  .unauth-right .auth-card { background: rgba(12, 22, 34, 0.35); border: 1px solid rgba(255, 255, 255, 0.22); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); box-shadow: 0 8px 30px rgba(12, 22, 34, 0.25); }
+    .auth-header { text-align:center; padding: 32px 32px 16px; border-bottom: 1px solid rgba(255,255,255,0.28); }
+    .auth-title { font-size: 2rem; font-weight: 700; color: #ffffff; margin: 0; }
+    .auth-desc { color: #e5e5e5; margin-top: 6px; }
+    .auth-body { padding: 24px 28px; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-weight: 600; display:block; margin-bottom: 8px; color: #ffffff; }
+    .form-control { width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 4px; box-sizing: border-box; }
+    .waves-btn { padding: 10px 16px; border-radius: 6px; font-weight: 600; }
+    .btn-primary { background: rgb(58,126,185); color: #fff; border: none; }
+    .waves-divider { text-align: center; margin: 18px 0; color: #ffffff; }
+    .waves-divider-text { color: #ffffff; }
+    .waves-link { color: #ffffff; text-decoration: none; }
+    /* Overrides: raise right card further and increase overlay blur */
+  .auth-card { transform: translateY(-90px) !important; }
+  .unauth-right .waves-auth-header,
+  .unauth-right .waves-auth-body,
+  .unauth-right .waves-auth-footer { background: transparent; }
+    .unauth-overlay {
+      background: rgba(255, 255, 255, 0.20) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="waves-corporate-bg home-bleed">
+    <div class="unauth-overlay"></div>
+    <div class="page-center container">
+      <section class="unauth-layout">
+        <div class="unauth-left">
+          <div class="brand-card">
+            <h1 class="brand-title">MetaServe</h1>
+            <p class="brand-subtitle">MetaServe is a lightweight, metadata-aware layer for discovering and delivering institutional biomedical files. It offers faceted search over curated metadata and audited, zero-copy handoff from data at rest to visualization and HPC workflows.</p>
+          </div>
+        </div>
+        <div class="unauth-right">
+          <div class="auth-card">
+            <div class="auth-header">
+              <h2 id="authTitle" class="auth-title">User Login</h2>
+              <p id="authDesc" class="auth-desc">Sign in to your account</p>
+            </div>
+            <div class="auth-body">
+              <form id="loginForm" class="waves-auth-form">
+                <div class="form-group">
+                  <label class="form-label" for="email">Email Address</label>
+                  <input id="email" type="email" class="form-control" placeholder="Enter your email address"/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="password">Password</label>
+                  <input id="password" type="password" class="form-control" placeholder="Enter your password"/>
+                </div>
+                <div class="form-group">
+                  <button type="button" class="btn btn-primary waves-btn">Sign In</button>
+                </div>
+              </form>
+              <form id="registerForm" class="waves-auth-form" style="display:none;">
+                <div class="form-group">
+                  <label class="form-label" for="email2">Email Address</label>
+                  <input id="email2" type="email" class="form-control" placeholder="Enter your email address"/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="password2">Password</label>
+                  <input id="password2" type="password" class="form-control" placeholder="Enter a password"/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="confirm2">Confirm Password</label>
+                  <input id="confirm2" type="password" class="form-control" placeholder="Re-enter your password"/>
+                </div>
+                <div class="form-group">
+                  <button type="button" class="btn btn-primary waves-btn">Sign Up</button>
+                </div>
+              </form>
+              <div class="waves-auth-footer">
+                <div class="waves-divider">
+                  <span class="waves-divider-text">or</span>
+                </div>
+                <p class="waves-text-light">
+                  <span id="switchText">Don't have an account?</span>
+                  <a href="#" id="switchLink" class="waves-link">Sign Up</a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script>
+    // Simple toggle for preview only
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const switchLink = document.getElementById('switchLink');
+    const switchText = document.getElementById('switchText');
+    const authTitle = document.getElementById('authTitle');
+    const authDesc = document.getElementById('authDesc');
+    let active = 'login';
+    switchLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      active = active === 'login' ? 'register' : 'login';
+      const isLogin = active === 'login';
+      loginForm.style.display = isLogin ? '' : 'none';
+      registerForm.style.display = isLogin ? 'none' : '';
+      authTitle.textContent = isLogin ? 'User Login' : 'User Registration';
+      authDesc.textContent = isLogin ? 'Sign in to your account' : 'Create your account';
+      switchText.textContent = isLogin ? "Don't have an account?" : 'Already have an account?';
+      switchLink.textContent = isLogin ? 'Sign Up' : 'Sign In';
+    });
+  </script>
+</body>
+</html>

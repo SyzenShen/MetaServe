@@ -6,12 +6,14 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     token: localStorage.getItem('token') || null,
     isLoading: false,
-    error: null
+    error: null,
+    organizations: []
   }),
 
   getters: {
     isAuthenticated: (state) => !!state.token,
-    currentUser: (state) => state.user
+    currentUser: (state) => state.user,
+    myOrganizations: (state) => state.organizations
   },
 
   actions: {
@@ -101,10 +103,33 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async fetchOrganizations() {
+      if (!this.token) {
+        this.organizations = []
+        return
+      }
+      try {
+        const res = await axios.get('/api/auth/orgs/')
+        const orgs = res.data?.organizations || []
+        this.organizations = orgs
+        // 供部分组件快速判断权限（例如 Navbar），避免重复请求
+        window.__myOrganizations = orgs
+      } catch (error) {
+        console.warn('Fetch organizations error:', error?.response?.status, error?.message)
+        this.organizations = []
+        window.__myOrganizations = []
+      }
+    },
+
     initializeAuth() {
       if (this.token) {
         axios.defaults.headers.common['Authorization'] = `Token ${this.token}`
+        // 并行拉取用户信息与组织信息，提升首屏权限判定的及时性
         this.fetchUser()
+        this.fetchOrganizations()
+        // 也同步放一个当前用户的全局快捷引用，部分纯脚本场景使用
+        // 注意：仅在登录状态下设置，登出时会清理
+        setTimeout(() => { window.__currentUser = this.user }, 0)
       }
     }
   }

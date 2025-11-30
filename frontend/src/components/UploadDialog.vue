@@ -109,6 +109,29 @@
             </div>
           </div>
         </div>
+
+        <div v-if="selectedFiles.length > 0" class="waves-access-settings">
+          <div class="waves-access-row">
+            <label class="waves-access-label">Access Level *</label>
+            <template v-if="isOrgFolder">
+              <input type="text" value="Restricted" class="waves-access-input" disabled />
+            </template>
+            <template v-else>
+              <select v-model="accessLevel" class="waves-access-select">
+                <option value="Public">Public</option>
+                <option value="Internal">Internal</option>
+                <option value="Restricted">Restricted</option>
+              </select>
+            </template>
+          </div>
+          <div v-if="isOrgFolder" class="waves-access-tip">
+            <span>This is an organization folder; access is forced to Restricted.</span>
+          </div>
+          <div v-if="isOrgFolder && orgNameForFolder" class="waves-access-row">
+            <label class="waves-access-label">Organization</label>
+            <input type="text" :value="orgNameForFolder" class="waves-access-input" disabled />
+          </div>
+        </div>
       </div>
       
       <!-- 对话框底部 -->
@@ -156,6 +179,21 @@ export default {
     const isDragOver = ref(false)
     
     const currentFolderId = computed(() => filesStore.currentFolderId)
+    const currentFolder = computed(() => filesStore.currentFolder)
+    const isOrgFolder = computed(() => !!currentFolder.value?.organization)
+    const orgNameForFolder = computed(() => currentFolder.value?.organization_name || '')
+    const accessLevel = ref('Internal')
+
+    watch(isOrgFolder, (val) => {
+      if (val) {
+        accessLevel.value = 'Restricted'
+      }
+    }, { immediate: true })
+    watch(currentFolderId, (id) => {
+      if (id && (currentFolder.value?.organization || currentFolder.value?.organization_name)) {
+        accessLevel.value = 'Restricted'
+      }
+    }, { immediate: true })
     
     const fileInput = ref(null)
     
@@ -193,6 +231,22 @@ export default {
       const files = Array.from(event.dataTransfer.files)
       selectedFiles.value = [...selectedFiles.value, ...files]
     }
+
+    const ensureOrgFolderInfo = async () => {
+      try {
+        const id = currentFolderId.value
+        if (!id) return
+        const token = localStorage.getItem('token')
+        const headers = token ? { Authorization: `Token ${token}` } : {}
+        const res = await fetch(`/api/files/folders/${id}/`, { headers })
+        if (res.ok) {
+          const cf = await res.json()
+          if (cf && (cf.organization || cf.organization_name)) {
+            accessLevel.value = 'Restricted'
+          }
+        }
+      } catch (_) {}
+    }
     
     const removeFile = (index) => {
       selectedFiles.value.splice(index, 1)
@@ -228,11 +282,19 @@ export default {
             }
           })
           
-          await filesStore.uploadFile(
-            file,
-            'Vue Frontend',
-            currentFolderId.value
-          )
+          if (isOrgFolder.value) {
+            await filesStore.uploadFileWithMetadata(
+              file,
+              { access_level: 'Restricted', organization_id: currentFolder.value?.organization || null, file_format: getFileType(file.name), title: file.name, project: 'Default Project', document_type: 'Dataset' },
+              currentFolderId.value
+            )
+          } else {
+            await filesStore.uploadFileWithMetadata(
+              file,
+              { access_level: accessLevel.value, file_format: getFileType(file.name), title: file.name, project: 'Default Project', document_type: 'Dataset' },
+              currentFolderId.value
+            )
+          }
           
           // 停止监听当前文件进度
           progressWatcher()
@@ -293,6 +355,10 @@ export default {
       uploadProgress,
       isDragOver,
       currentFolderId,
+      currentFolder,
+      isOrgFolder,
+      orgNameForFolder,
+      accessLevel,
       fileInput,
       selectFiles,
       handleFileSelect,

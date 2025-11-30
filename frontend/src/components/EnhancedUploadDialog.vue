@@ -124,35 +124,47 @@
                   </div>
                   
                   <div class="form-group">
-                    <label for="access_level">Access Level *</label>
-                    <select id="access_level" v-model="metadata.access_level" required>
+                  <label for="access_level">Access Level *</label>
+                  <template v-if="isOrgFolder">
+                    <input id="access_level" type="text" value="Restricted" disabled />
+                    <small>This is an organization folder; access is forced to Restricted.</small>
+                  </template>
+                  <template v-else>
+                    <select id="access_level" v-model="metadata.access_level" required :disabled="isOrgFolder">
                       <option value="">Select</option>
                       <option value="Public" :disabled="!canSetPublic">Public</option>
-                      <option value="Internal">Internal</option>
+                      <option value="Internal" :disabled="isOrgFolder">Internal</option>
                       <option value="Restricted" :disabled="!canSetRestricted">Restricted</option>
                     </select>
                     <small v-if="!canSetRestricted">Only owner/admin can select Restricted; create an organization or ask an admin.</small>
+                  </template>
                   </div>
                 </div>
 
                 <div class="form-row" v-if="metadata.access_level === 'Restricted'">
                   <div class="form-group">
                     <label for="organization">Share to Organization</label>
-                    <select id="organization" v-model="selectedOrganizationId" :disabled="filteredOrganizations.length === 0">
+                    <template v-if="isOrgFolder">
+                      <input id="organization" type="text" :value="orgNameForFolder" disabled />
+                      <small>Uploads in this folder are visible only to this organization.</small>
+                    </template>
+                    <template v-else>
+                    <select id="organization" v-model="selectedOrganizationId" :disabled="filteredOrganizations.length === 0 || isOrgFolder">
                       <option value="">Select an organization</option>
                       <option v-for="org in filteredOrganizations" :key="org.id" :value="org.id">
                         {{ org.name }}
                       </option>
                     </select>
-                    <small v-if="filteredOrganizations.length === 0">
-                      No organizations found. Create or join one, or contact an admin.
-                      <a href="/api/auth/orgs/ui/" target="_blank">Go to Organization Management</a>
-                    </small>
-                    <div v-if="organizations.length === 0" class="inline-create-org" style="margin-top:8px; display:flex; gap:8px; align-items:center;">
-                      <input v-model="newOrgName" type="text" placeholder="Enter organization name" style="flex:1;" />
-                      <button type="button" @click="createOrganization" class="btn btn-default btn-sm">Create Organization</button>
-                    </div>
-                    <small v-else>Restricted files require selecting a visible organization or setting it later on the share page.</small>
+                      <small v-if="filteredOrganizations.length === 0">
+                        No organizations found. Create or join one, or contact an admin.
+                        <a href="/api/auth/orgs/ui/" target="_blank">Go to Organization Management</a>
+                      </small>
+                      <div v-if="organizations.length === 0" class="inline-create-org" style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+                        <input v-model="newOrgName" type="text" placeholder="Enter organization name" style="flex:1;" />
+                        <button type="button" @click="createOrganization" class="btn btn-default btn-sm">Create Organization</button>
+                      </div>
+                      <small v-else>Restricted files require selecting a visible organization or setting it later on the share page.</small>
+                    </template>
                   </div>
                 </div>
               </div>
@@ -385,8 +397,7 @@ export default {
       return (organizations.value || []).filter(o => o.role === 'owner' || o.role === 'admin')
     })
     const canSetPublic = computed(() => {
-      // 仅管理员允许设置 Public；后端仍会再校验
-      return window.__currentUser?.is_staff === true
+      return window.__currentUser?.is_staff === true && !isOrgFolder.value
     })
     const canSetRestricted = computed(() => {
       // 用户在任一组织中拥有 owner/admin 角色时才允许 Restricted
@@ -394,6 +405,11 @@ export default {
     })
     // 防御性处理：若无权限却选了 Restricted，自动回退为 Internal
     watch(() => metadata.access_level, (lvl) => {
+      if (isOrgFolder.value) {
+        metadata.access_level = 'Restricted'
+        selectedOrganizationId.value = currentFolder.value?.organization || null
+        return
+      }
       if (lvl === 'Restricted' && !canSetRestricted.value) {
         metadata.access_level = 'Internal'
       }
@@ -441,23 +457,64 @@ export default {
     
     // 自动检测信息
     const detectedInfo = ref([])
+    const orgDetected = ref(false)
     
     // 计算属性
     const currentFolderId = computed(() => filesStore.currentFolderId)
+    const currentFolder = computed(() => filesStore.currentFolder)
+    const isOrgFolder = computed(() => {
+      if (orgDetected.value) return true
+      const cf = currentFolder.value
+      return !!(cf && (cf.organization || cf.organization_name))
+    })
+    const orgNameForFolder = computed(() => currentFolder.value?.organization_name || '')
     
     const canProceed = computed(() => {
       if (currentStep.value === 1) {
         return selectedFiles.value.length > 0
       }
       if (currentStep.value === 2) {
+        if (isOrgFolder.value) {
+          metadata.access_level = 'Restricted'
+        }
         const ok = metadata.title && metadata.project && metadata.document_type && metadata.access_level
         if (!ok) return false
         if (metadata.access_level === 'Restricted') {
+          // 在组织文件夹内，强制使用该文件夹的组织，不允许更换
+          if (isOrgFolder.value) return true
           return canSetRestricted.value && selectedOrganizationId.value !== null
         }
         return true
       }
       return true
+    })
+
+    watch(currentFolderId, (id) => {
+      if (id && isOrgFolder.value) {
+        metadata.access_level = 'Restricted'
+        selectedOrganizationId.value = currentFolder.value?.organization || null
+      }
+    }, { immediate: true })
+
+    const ensureOrgFolderInfo = async () => {
+      try {
+        const id = currentFolderId.value
+        if (!id) return
+        const token = localStorage.getItem('token')
+        const headers = token ? { Authorization: `Token ${token}` } : {}
+        const res = await axios.get(`/api/files/folders/${id}/`, { headers })
+        const cf = res.data || {}
+        if (cf && (cf.organization || cf.organization_name)) {
+          orgDetected.value = true
+          metadata.access_level = 'Restricted'
+          selectedOrganizationId.value = cf.organization || null
+        }
+      } catch (_) {}
+    }
+
+    onMounted(() => {
+      fetchOrganizations()
+      ensureOrgFolderInfo()
     })
     
     const canUpload = computed(() => {
@@ -561,9 +618,12 @@ export default {
           
           // 上传文件
           // 传递受限组织可见性
-          if (metadata.access_level === 'Restricted' && selectedOrganizationId.value) {
-            fileMetadata.organization_id = selectedOrganizationId.value
-          }
+        if (isOrgFolder.value) {
+          fileMetadata.access_level = 'Restricted'
+          fileMetadata.organization_id = currentFolder.value?.organization || null
+        } else if (metadata.access_level === 'Restricted' && selectedOrganizationId.value) {
+          fileMetadata.organization_id = selectedOrganizationId.value
+        }
           await filesStore.uploadFileWithMetadata(
             file,
             fileMetadata,

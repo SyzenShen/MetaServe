@@ -27,6 +27,8 @@ class Folder(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='folders')
     name = models.CharField(max_length=255, verbose_name="文件夹名称")
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
+    organization = models.ForeignKey('authentication.Organization', on_delete=models.CASCADE, null=True, blank=True, related_name='folders')
+    is_public = models.BooleanField(default=False, verbose_name="公开可见")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -65,7 +67,9 @@ class Folder(models.Model):
         return subfolders
 
     def __str__(self):
-        return f"{self.get_path()} - {self.user.username}"
+        org = getattr(self, 'organization', None)
+        org_part = f" @{getattr(org, 'name', '')}" if org else ""
+        return f"{self.get_path()}{org_part} - {self.user.username}"
 
 
 class File(models.Model):

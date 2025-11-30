@@ -1,19 +1,181 @@
 <template>
-  <div class="waves-corporate-bg home-bleed">
+  <div class="waves-corporate-bg home-bleed" :class="{ 'unauth-bg': !isAuthenticated }">
+    <!-- Semi-transparent right-side overlay for unauthenticated welcome page -->
+    <div v-if="!isAuthenticated" class="unauth-overlay"></div>
+    <!-- 壁纸左上角的品牌标识（未登录时显示） -->
+    <div v-if="!isAuthenticated" class="wallpaper-brand">
+      <img :src="logoSrc" alt="MetaServe Logo" class="wallpaper-logo" @error="handleLogoError" />
+      <span class="wallpaper-title">MetaServe</span>
+    </div>
     <div class="page-center container">
-      <section v-if="!isAuthenticated" class="portal-unauth">
-        <img src="./logo.png" alt="MetaServe Logo" class="portal-logo" />
-        <h1 class="portal-title">MetaServe</h1>
-        <p class="portal-subtitle">Simple. Secure. Smart.</p>
-  <div class="portal-actions">
-    <router-link to="/login" class="portal-link portal-link--signin">
-      <span>Sign In</span>
-    </router-link>
-    <span class="portal-hint">
-      <span>No account?</span>
-      <router-link to="/register" class="portal-link portal-link--register"><span>Create one</span></router-link>
-    </span>
-  </div>
+      <section v-if="!isAuthenticated" class="unauth-layout">
+        <!-- 左侧品牌卡片：MetaServe, Simple. Secure. Smart. -->
+        <div class="unauth-left">
+          <div class="brand-card">
+            <h1 class="brand-title">MetaServe</h1>
+            <p class="brand-subtitle">MetaServe is a lightweight, metadata-aware layer for discovering and delivering institutional biomedical files. It offers faceted search over curated metadata and audited, zero-copy handoff from data at rest to visualization and HPC workflows.</p>
+            <p class="brand-meta">
+              Open-source (MIT). Source code and docs at:
+              <a href="https://github.com/SyzenShen/Download_system_project" target="_blank" rel="noopener" class="brand-link">
+                <code>https://github.com/SyzenShen/Download_system_project</code>
+              </a>
+            </p>
+          </div>
+        </div>
+
+        <!-- 右侧登录/注册切换面板 -->
+        <div class="unauth-right">
+          <div class="card page-card waves-auth-card waves-well auth-card">
+            <div class="card-header waves-auth-header">
+              <h2 class="card-title waves-text-corporate">{{ activeAuth === 'login' ? 'User Login' : 'User Registration' }}</h2>
+              <p class="waves-text-light">{{ activeAuth === 'login' ? 'Sign in to your account' : 'Create your account' }}</p>
+            </div>
+            <div class="card-body waves-auth-body">
+              <!-- 错误与成功提示 -->
+              <div v-if="error" class="alert alert-error waves-alert-error">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+                </svg>
+                {{ error }}
+              </div>
+              <div v-if="activeAuth === 'register' && successMessage" class="alert alert-success waves-alert-success">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z" fill="currentColor"/>
+                </svg>
+                {{ successMessage }}
+              </div>
+
+              <!-- 登录表单 -->
+              <form v-if="activeAuth === 'login'" @submit.prevent="handleLogin" class="waves-auth-form">
+                <div class="form-group waves-form-group">
+                  <label for="login_email" class="form-label waves-form-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 4H4C2.9 4 2.01 4.9 2.01 6L2 18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z" fill="currentColor"/>
+                    </svg>
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="login_email"
+                    v-model="loginForm.email"
+                    class="form-control waves-form-control"
+                    placeholder="Enter your email address"
+                    required
+                    :disabled="isLoading"
+                  />
+                </div>
+
+                <div class="form-group waves-form-group">
+                  <label for="login_password" class="form-label waves-form-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 8H17V6C17 3.24 14.76 1 12 1S7 3.24 7 6V8H6C4.9 8 4 8.9 4 10V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V10C20 8.9 19.1 8 18 8ZM12 17C10.9 17 10 16.1 10 15S10.9 13 12 13 14 13.9 14 15 13.1 17 12 17ZM15.1 8H8.9V6C8.9 4.29 10.29 2.9 12 2.9S15.1 4.29 15.1 6V8Z" fill="currentColor"/>
+                    </svg>
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="login_password"
+                    v-model="loginForm.password"
+                    class="form-control waves-form-control"
+                    placeholder="Enter your password"
+                    required
+                    :disabled="isLoading"
+                  />
+                </div>
+
+                <div class="form-group waves-submit-group">
+                  <button type="submit" class="btn btn-primary waves-btn waves-btn-primary auth-submit-center" :disabled="isLoading">
+                    <span v-if="isLoading" class="waves-loading-spinner"></span>
+                    {{ isLoading ? 'Signing in...' : 'Sign In' }}
+                  </button>
+                </div>
+              </form>
+
+              <!-- 注册表单 -->
+              <form v-else @submit.prevent="handleRegister" class="waves-auth-form waves-register-form">
+                <div class="form-group waves-form-group">
+                  <label for="reg_email" class="form-label waves-form-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 4H4C2.9 4 2.01 4.9 2.01 6L2 18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z" fill="currentColor"/>
+                    </svg>
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="reg_email"
+                    v-model="registerForm.email"
+                    class="form-control waves-form-control"
+                    placeholder="Enter your email address"
+                    required
+                    :disabled="isLoading"
+                  />
+                </div>
+
+                <div class="form-group waves-form-group">
+                  <label for="reg_password" class="form-label waves-form-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 8H17V6C17 3.24 14.76 1 12 1S7 3.24 7 6V8H6C4.9 8 4 8.9 4 10V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V10C20 8.9 19.1 8 18 8ZM12 17C10.9 17 10 16.1 10 15S10.9 13 12 13 14 13.9 14 15 13.1 17 12 17ZM15.1 8H8.9V6C8.9 4.29 10.29 2.9 12 2.9S15.1 4.29 15.1 6V8Z" fill="currentColor"/>
+                    </svg>
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="reg_password"
+                    v-model="registerForm.password"
+                    class="form-control waves-form-control"
+                    :class="{ 'waves-form-error': registerForm.password && !isPasswordValid }"
+                    placeholder="Enter a password"
+                    required
+                    :disabled="isLoading"
+                    minlength="8"
+                    @input="validatePassword"
+                  />
+                </div>
+
+                <div class="form-group waves-form-group">
+                  <label for="reg_confirm" class="form-label waves-form-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z" fill="currentColor"/>
+                    </svg>
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    id="reg_confirm"
+                    v-model="registerForm.confirmPassword"
+                    class="form-control waves-form-control"
+                    :class="{ 'waves-form-error': registerForm.password && registerForm.confirmPassword && registerForm.password !== registerForm.confirmPassword }"
+                    placeholder="Re-enter your password"
+                    required
+                    :disabled="isLoading"
+                  />
+                  <small v-if="registerForm.password && registerForm.confirmPassword && registerForm.password !== registerForm.confirmPassword" class="waves-form-error-text">
+                    Passwords do not match
+                  </small>
+                </div>
+
+                <div class="form-group waves-submit-group">
+                  <button type="submit" class="btn btn-primary waves-btn waves-btn-primary" :disabled="isLoading || registerForm.password !== registerForm.confirmPassword || !isPasswordValid">
+                    <span v-if="isLoading" class="waves-loading-spinner"></span>
+                    {{ isLoading ? 'Registering...' : 'Sign Up' }}
+                  </button>
+                </div>
+              </form>
+
+              <div class="waves-auth-footer">
+                <div class="waves-divider">
+                  <span class="waves-divider-text">or</span>
+                </div>
+                <p class="waves-text-light">
+                  {{ activeAuth === 'login' ? "Don't have an account?" : 'Already have an account?' }}
+                  <a href="#" class="waves-link" @click.prevent="toggleAuth">
+                    {{ activeAuth === 'login' ? 'Sign Up' : 'Sign In' }}
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div v-else class="card page-card hero-card waves-well">
@@ -71,10 +233,11 @@
 </template>
 
 <script>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useFilesStore } from '../stores/files'
 import StoragePie from '../components/StoragePie.vue'
+import assetLogo from '../assets/images/logo.png'
 
 export default {
   name: 'Home',
@@ -85,6 +248,48 @@ export default {
     const isAuthenticated = computed(() => authStore.isAuthenticated)
     const currentUser = computed(() => authStore.currentUser)
     const statsReady = ref(false)
+
+    // 未登录右侧内嵌登录/注册表单的状态与逻辑
+    const activeAuth = ref('login') // 'login' | 'register'
+    const toggleAuth = () => { activeAuth.value = activeAuth.value === 'login' ? 'register' : 'login' }
+    const isLoading = computed(() => authStore.isLoading)
+    const error = computed(() => authStore.error)
+
+    // 登录表单
+    const loginForm = ref({ email: '', password: '' })
+    const handleLogin = async () => {
+      const result = await authStore.login(loginForm.value)
+      if (result.success) {
+        // 登录成功后直接进入首页（此组件会切换到已登录视图）
+        activeAuth.value = 'login'
+      }
+    }
+
+    // 注册表单
+    const registerForm = ref({ email: '', password: '', confirmPassword: '' })
+    const successMessage = ref('')
+    const passwordChecks = ref({ length: false, uppercase: false, lowercase: false, number: false })
+    const isPasswordValid = computed(() => passwordChecks.value.length && passwordChecks.value.uppercase && passwordChecks.value.lowercase && passwordChecks.value.number)
+    const validatePassword = () => {
+      const password = registerForm.value.password || ''
+      passwordChecks.value.length = password.length >= 8
+      passwordChecks.value.uppercase = /[A-Z]/.test(password)
+      passwordChecks.value.lowercase = /[a-z]/.test(password)
+      passwordChecks.value.number = /\d/.test(password)
+    }
+    const handleRegister = async () => {
+      if (registerForm.value.password !== registerForm.value.confirmPassword) return
+      const result = await authStore.register({
+        email: registerForm.value.email,
+        password: registerForm.value.password,
+        confirm_password: registerForm.value.confirmPassword,
+      })
+      if (result.success) {
+        successMessage.value = result.message
+        // 注册成功后切换到登录页表单
+        setTimeout(() => { activeAuth.value = 'login' }, 1500)
+      }
+    }
 
     const totalFiles = computed(() => filesStore.files.length)
     const totalFolders = computed(() => filesStore.folders.length)
@@ -106,12 +311,26 @@ export default {
     })
     const quotaBytes = computed(() => currentUser.value?.storage_quota ?? (50 * 1024 * 1024 * 1024))
 
+    const initStats = async () => {
+      try { await filesStore.fetchFiles(null) } catch (_) {}
+      statsReady.value = true
+    }
+
     onMounted(async () => {
       if (isAuthenticated.value) {
-        try { await filesStore.fetchFiles(null) } catch (_) {}
-        statsReady.value = true
+        await initStats()
       }
     })
+
+    watch(isAuthenticated, async (val) => {
+      if (val) {
+        await initStats()
+      }
+    })
+
+    // 未登录首页品牌标识的 logo 资源与降级处理
+    const logoSrc = ref('/api/auth/logo.png')
+    const handleLogoError = () => { logoSrc.value = assetLogo }
     
     return {
       isAuthenticated,
@@ -122,86 +341,123 @@ export default {
       formattedTotalSize
       , formattedQuota,
       totalSizeBytes,
-      quotaBytes
+      quotaBytes,
+      // 未登录内嵌认证面板暴露变量/方法
+      activeAuth,
+      toggleAuth,
+      isLoading,
+      error,
+      loginForm,
+      handleLogin,
+      registerForm,
+      successMessage,
+      passwordChecks,
+      isPasswordValid,
+      validatePassword,
+      handleRegister
+      , logoSrc, handleLogoError
     }
   }
 }
 
 </script>
 <style scoped>
-.portal-unauth {
-  min-height: 60vh;
+.unauth-layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr clamp(380px, 32vw, 480px);
+  align-items: center;
+  justify-items: center; /* 两列内容在各自列水平居中 */
+  min-height: 100vh; /* 以视口高度为基准垂直居中 */
+  gap: 0;
+}
+.unauth-left {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-self: start;
+  padding-left: min(2vw, 40px);
+}
+.brand-card {
+  /* 深色玻璃态背景，保留模糊效果 */
+  background: rgba(12, 22, 34, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  padding: 36px 44px;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  max-width: 800px;
+  transform: translate(-320px, -60px);
+}
+.brand-title { font-size: 3.8rem; font-weight: 700; margin-bottom: 22px; color: #ffffff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.18); }
+.brand-subtitle { font-size: 1rem; margin: 0; color: #e5e5e5; text-shadow: 0 0 6px rgba(255, 255, 255, 0.16); }
+/* 开源提示与链接 */
+.brand-meta { margin-top: 14px; font-size: 0.95rem; color: #e8eef6; }
+.brand-link { color: #ffffff; text-decoration: none; }
+.brand-link code { color: #ffffff; background: rgba(255, 255, 255, 0.12); padding: 2px 6px; border-radius: 4px; }
+
+.unauth-right {
+  position: relative;
+  display: flex;
+  align-items: center; /* 垂直居中到右侧遮罩内 */
   justify-content: center;
-  text-align: center;
-  padding: 28px 20px;
-  margin-top: -36px; /* 再上移一点 */
+  padding: 0 24px 0 0; /* 略增右侧外边距，避免贴边拥挤 */
 }
-.portal-title { font-size: 3.2rem; font-weight: 700; margin-bottom: 6px; color: #1a1a1a; text-shadow: 0 0 8px rgba(58, 126, 185, 0.15); }
-.portal-logo { width: 260px; height: auto; margin-bottom: 6px; display: inline-block; filter: drop-shadow(0 0 8px rgba(58, 126, 185, 0.25)); transition: filter 0.2s ease; }
-.portal-logo:hover { filter: drop-shadow(0 0 12px rgba(58, 126, 185, 0.35)); }
-.portal-subtitle { font-size: 1rem; margin-bottom: 24px; color: #666; text-shadow: 0 0 6px rgba(58, 126, 185, 0.12); }
-  .portal-actions { display: flex; flex-direction: column; gap: 24px; align-items: flex-start; justify-content: center; margin-top: 38px; text-align: left; }
-  /* 让 Sign In 居中 */
-  .portal-actions .portal-link--signin { align-self: center; }
-.portal-hint { color: #4a4a4a; font-size: 1rem; display: inline-flex; align-items: center; gap: 8px; }
-.portal-secondary { color: rgb(58, 126, 185); text-decoration: none; font-weight: 600; }
-/* Make Sign In button text larger only on the unauthenticated view */
-.portal-actions .btn-primary.waves-btn { font-size: 1.2rem; }
+/* 将右侧注册卡宽度与遮罩列一致，提升输入框可用宽度 */
+.auth-card { transform: translateY(-40px); width: clamp(380px, 32vw, 480px); }
+/* Dark glass style for right-side auth card on unauth layout */
+.unauth-right .auth-card {
+  background: rgba(12, 22, 34, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 8px 30px rgba(12, 22, 34, 0.25);
+}
+.unauth-right .waves-auth-header,
+.unauth-right .waves-auth-body,
+.unauth-right .waves-auth-footer {
+  background: transparent;
+}
+/* 降低卡片内部左右内边距，扩大输入框视觉宽度 */
+.unauth-right .waves-auth-body { padding: 36px 32px; }
+/* Center the Sign In button within submit group */
+.unauth-right .waves-submit-group { display: flex; justify-content: center; }
+.unauth-right .auth-submit-center { margin: 0 auto; display: inline-flex; }
+/* 注册页输入框与登录页一致：占满容器宽度 */
+.waves-register-form .waves-form-control { width: 100% !important; }
 
-/* Text link style for Sign In / Create one */
-.portal-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #1a1a1a;
-  font-weight: 600;
-  text-decoration: none;
-  padding-bottom: 2px;
-  border-bottom: 2px solid transparent;
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-.portal-icon svg { display: block; width: 14px; height: 14px; }
+/* 覆盖右侧面板内文本颜色为白色，提升对比度 */
+.unauth-right .waves-auth-header .card-title { color: #ffffff !important; font-size: 2rem; }
+.unauth-right .waves-auth-header .card-title.waves-text-corporate { color: #ffffff !important; }
+.unauth-right .waves-auth-header p { color: #e5e5e5; }
+.unauth-right .waves-form-label { color: #ffffff; }
+.unauth-right .waves-divider { color: #e5e5e5; }
+.unauth-right .waves-link { color: #ffffff; }
+/* 统一页脚提示文字为白色 */
+.unauth-right .waves-auth-footer p,
+.unauth-right .waves-text-light,
+.unauth-right .waves-divider-text { color: #ffffff; }
+/* Make footer inline: "or Don't have an account? Sign Up" in one line */
+.unauth-right .waves-auth-footer { text-align: center; }
+.unauth-right .waves-auth-footer .waves-divider { margin: 10px 0; }
+.unauth-right .waves-auth-footer p { display: inline-block; margin-top: 0; }
+.unauth-right .waves-auth-footer .waves-divider-text { display: inline; margin: 0 8px; }
+.unauth-right .waves-auth-footer .waves-link { display: inline; }
 
-/* Sign In 专属样式：加粗、稍大、居中、悬停下划线与轻微变色 */
-.portal-link--signin {
-  font-weight: 700;
-  font-size: 1.2rem;
-  align-self: center;
-  background: rgb(75, 126, 180); /* 深蓝 24 50 80 */
-  color: #ffffff; /* 文本改为黑色 */
-  border-radius: 4px;
-  padding: 16px 28px; /* 纵向稍增，按钮更大一点 */
-  border: 1px solid rgba(0, 0, 0, 0.15); /* 简洁描边 */
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); /* 轻阴影，提升质感 */
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-  border-bottom: none !important; /* 覆盖通用链接底线 */
+.unauth-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: clamp(380px, 32vw, 480px);
+  background: rgba(12, 22, 34, 0.32);
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 0 !important; /* ensure it sits below content */
+  pointer-events: none; /* avoid intercepting clicks */
 }
-.portal-link--signin:hover {
-  background: rgb(45, 102, 150); /* 与主按钮悬停一致 */
-  color: #fff !important; /* 悬停改为白字，提升对比 */
-  border-bottom-color: transparent !important; /* 不显示底部线 */
-  border-color: rgb(45, 102, 150); /* 与主按钮悬停一致 */
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12); /* 悬停阴影略增强 */
-}
-.portal-link:hover {
-  color: rgb(58, 126, 185);
-  border-bottom-color: rgb(58, 126, 185);
-}
-/* Register 悬停色与按钮保持一致 */
-.portal-link--register:hover {
-  color: rgb(45, 102, 150);
-  border-bottom-color: rgb(45, 102, 150);
-}
-/* Active state highlight for current page link */
-.portal-link.router-link-active,
-.portal-link.router-link-exact-active {
-  color: rgb(58, 126, 185);
-  border-bottom-color: rgb(58, 126, 185);
-}
+
 
 .waves-corporate-bg {
   /* Disable corporate banner image and overlay for Home */
@@ -226,19 +482,57 @@ export default {
   background-clip: border-box;
 }
 
-/* Ensure container on Home page is not capped by global 1200px */
-:global(.page-center.container) {
-  max-width: 1060px !important;
-  width: 100%;
-  /* 减少首页的上页边距 */
-  padding-top: 16px !important;
+/* 未登录时使用 image.png 作为背景 */
+.home-bleed.unauth-bg {
+  background: url('./image.png') center/cover no-repeat !important;
 }
 
-/* 仅在首页提升选择器权重并统一容器内边距，确保上移有效 */
-.home-bleed .page-center.container {
-  /* 顶部改为 0；左右保持 20px；底部 24px */
-  padding: 0 20px 24px !important;
+/* 让首页容器占满视口并取消居中，仅在未登录视图生效 */
+.home-bleed.unauth-bg :global(.page-center.container) {
+  max-width: none !important;
+  width: 100vw !important;
+  margin: 0 !important;
+  /* 去掉顶部内边距，让背景贴紧导航栏 */
+  padding-top: 0 !important;
+  /* 未登录首页需要满屏贴顶，忽略全局 100vh - 72px */
+  min-height: 100vh !important;
+}
+
+/* 未登录首页裁掉页面最上方20px不可见区域（配合 App.vue 的 home-top-crop 类） */
+:global(main.container.home-top-crop) {
+  position: relative;
+  top: -25px;             /* 向上位移 20px，裁掉顶部 */
+  padding-top: 20px;      /* 回补内容布局，避免被压到视口外 */
+}
+
+/* 仅在未登录视图统一容器内边距，贴右侧容器 */
+.home-bleed.unauth-bg .page-center.container {
+  /* 顶部 0；右侧贴边 0；底部 24px（保持下方适度空间） */
+  padding: 0 0 24px !important;
   align-items: flex-start;
+  justify-content: flex-end !important;
+}
+
+/* 壁纸上的品牌标识（左上角叠加） */
+.wallpaper-brand {
+  position: absolute;
+  top: 14px;
+  left: min(2vw, 20px);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+.wallpaper-logo { height: 36px; width: auto; }
+.wallpaper-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #000000;
+  text-shadow: none;
 }
 
 .home-container {
@@ -250,7 +544,7 @@ export default {
 }
 
 .hero-card {
-  max-width: 2000px !important;
+  max-width: 1200px !important;
   width: 100%;
   text-align: center;
   padding: 32px;
@@ -385,7 +679,7 @@ export default {
   gap: 16px;
   width: 100%;
   /* Widen to align with headline card width */
-  max-width: 2000px;
+  max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -436,7 +730,7 @@ export default {
 
 .headline-card {
   /* Wider and aligned with the insights grid below */
-  max-width: 2000px !important;
+  max-width: 1200px !important;
   width: 100%;
   margin: 0 auto; /* 去除额外下边距，统一用行间距控制 */
   padding: 40px 0; /* remove horizontal padding for alignment */

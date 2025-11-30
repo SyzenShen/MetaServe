@@ -9,6 +9,8 @@ class FileSerializer(serializers.ModelSerializer):
     file_path = serializers.SerializerMethodField()
     parent_folder_name = serializers.SerializerMethodField()
     tags_list = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = File
@@ -17,9 +19,9 @@ class FileSerializer(serializers.ModelSerializer):
                  # 新增元数据字段
                  'title', 'project', 'uploader', 'file_format', 'document_type', 'access_level',
                  'organism', 'experiment_type', 'tags', 'tags_list', 'description', 'checksum', 
-                 'qc_status', 'extracted_metadata')
+                 'qc_status', 'extracted_metadata', 'can_delete', 'is_owner')
         read_only_fields = ('id', 'uploaded_at', 'file_size', 'file_url', 'file_name', 'file_path', 
-                           'parent_folder_name', 'checksum', 'extracted_metadata', 'tags_list')
+                           'parent_folder_name', 'checksum', 'extracted_metadata', 'tags_list', 'can_delete', 'is_owner')
 
     def get_file_url(self, obj):
         if obj.file:
@@ -42,6 +44,21 @@ class FileSerializer(serializers.ModelSerializer):
         if obj.tags:
             return [tag.strip() for tag in obj.tags.split(',') if tag.strip()]
         return []
+
+    def get_can_delete(self, obj):
+        try:
+            from .permission_utils import can_delete_file
+            user = self.context['request'].user
+            return bool(can_delete_file(user, obj))
+        except Exception:
+            return False
+
+    def get_is_owner(self, obj):
+        try:
+            user = self.context['request'].user
+            return getattr(obj, 'user_id', None) == getattr(user, 'id', None)
+        except Exception:
+            return False
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
@@ -183,13 +200,17 @@ class FolderSerializer(serializers.ModelSerializer):
     subfolders_count = serializers.SerializerMethodField()
     files_count = serializers.SerializerMethodField()
     folder_size = serializers.SerializerMethodField()
+    organization_name = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
+    can_manage_permissions = serializers.SerializerMethodField()
+    
 
     class Meta:
         model = Folder
         fields = ('id', 'name', 'parent', 'parent_name', 'folder_path', 
-                 'created_at', 'updated_at', 'subfolders_count', 'files_count', 'folder_size')
+                 'created_at', 'updated_at', 'subfolders_count', 'files_count', 'folder_size', 'organization', 'organization_name', 'is_public', 'is_owner', 'can_manage_permissions')
         read_only_fields = ('id', 'created_at', 'updated_at', 'folder_path', 
-                           'parent_name', 'subfolders_count', 'files_count', 'folder_size')
+                           'parent_name', 'subfolders_count', 'files_count', 'folder_size', 'organization_name', 'is_owner', 'can_manage_permissions')
 
     def get_folder_path(self, obj):
         return obj.get_path()
@@ -216,6 +237,32 @@ class FolderSerializer(serializers.ModelSerializer):
         
         return calculate_folder_size(obj)
 
+    def get_organization_name(self, obj):
+        return obj.organization.name if getattr(obj, 'organization', None) else None
+
+    def get_is_owner(self, obj):
+        try:
+            user = self.context['request'].user
+            return getattr(obj, 'user_id', None) == getattr(user, 'id', None)
+        except Exception:
+            return False
+
+    def get_can_manage_permissions(self, obj):
+        try:
+            user = self.context['request'].user
+            # 仅根文件夹允许显示管理入口
+            if getattr(obj, 'parent_id', None) is not None:
+                return False
+            # 个人根：本人
+            if getattr(obj, 'organization_id', None) is None:
+                return getattr(obj, 'user_id', None) == getattr(user, 'id', None)
+            # 组织根：组织 owner/admin
+            from authentication.models import Membership
+            me = Membership.objects.filter(organization_id=obj.organization_id, user=user).first()
+            return bool(me and me.role in ('owner', 'admin'))
+        except Exception:
+            return False
+
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
@@ -224,7 +271,7 @@ class FolderSerializer(serializers.ModelSerializer):
 class FolderCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Folder
-        fields = ('name', 'parent')
+        fields = ('name', 'parent', 'organization', 'is_public')
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user

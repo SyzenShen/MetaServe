@@ -64,7 +64,7 @@
             <div class="preview-header">
               <h3>PDF File Info</h3>
             </div>
-            <p class="pdf-message">{{ previewData.message }}</p>
+            <p class="pdf-message">{{ displayMessage }}</p>
             <div v-if="previewData.metadata" class="metadata-display">
               <h4>Metadata:</h4>
               <pre>{{ JSON.stringify(previewData.metadata, null, 2) }}</pre>
@@ -79,7 +79,7 @@
             <div class="preview-header">
               <h3>File Info</h3>
             </div>
-            <p class="metadata-message">{{ previewData.message }}</p>
+            <p class="metadata-message">{{ displayMessage }}</p>
           </div>
 
           <!-- Error State -->
@@ -203,18 +203,24 @@ export default {
         previewData.value = response.preview
         
       } catch (err) {
-        console.error('加载预览失败:', err)
-        error.value = err.message || '加载预览失败'
+        console.error('Load preview failed:', err)
+        error.value = err.message || 'Preview loading failed'
       } finally {
         isLoading.value = false
       }
     }
+    const displayMessage = computed(() => {
+      const msg = previewData.value?.message || ''
+      const zh = '此文件格式不支持预览，仅显示元数据信息'
+      if (msg.includes(zh)) return 'This file format is not supported for preview; only metadata is displayed'
+      return msg
+    })
     
     const downloadFile = async () => {
       try {
         await filesStore.downloadFile(props.file.id, props.file.original_filename)
       } catch (err) {
-        console.error('下载失败:', err)
+        console.error('Download failed:', err)
       }
     }
     
@@ -247,7 +253,8 @@ export default {
       closeModal,
       downloadFile,
       formatFileSize,
-      formatDate
+      formatDate,
+      displayMessage
     }
   }
 }
@@ -567,7 +574,7 @@ export default {
   background: #5a6268;
 }
 
-/* 响应式设计 */
+/* Responsive */
 @media (max-width: 768px) {
   .modal-container {
     width: 95vw;

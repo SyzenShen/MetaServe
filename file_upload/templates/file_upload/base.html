@@ -5,7 +5,7 @@
 <title>{% block title %}Django File Upload and Download{% endblock %} </title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'rest_framework/css/bootstrap.min.css' %}">
 <!-- 统一前后端导航字体：使用 Inter 400/500/600/700 -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -149,7 +149,7 @@
       <li class="{% if 'download' in request.path %}active{% endif %}"><a href="/download">Download</a></li>
       <li class="{% if 'search' in request.path %}active{% endif %}"><a href="/search">Search Files</a></li>
       <li class="{% if 'cellxgene-app' in request.path %}active{% endif %}"><a href="/cellxgene-app">Cell Visualization</a></li>
-      {% if request.user.is_superuser %}
+      {% if can_manage_orgs or request.user.is_superuser %}
       <li class="{% if 'orgs/ui' in request.path %}active{% endif %}"><a href="/api/auth/orgs/ui/">management</a></li>
       {% endif %}
       <li class="{% if 'profile' in request.path %}active{% endif %}"><a href="/profile">Profile</a></li>
@@ -186,8 +186,8 @@
 <!-- Bootstrap core JavaScript
 ================================================== -->
 
-<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="{% static 'rest_framework/js/jquery-3.5.1.min.js' %}"></script>
+<script src="{% static 'rest_framework/js/bootstrap.min.js' %}"></script>
 
 {% block js %} {% endblock %}
 

@@ -42,6 +42,8 @@ def downloads_start(request):
     url = (request.data.get('url') or '').strip()
     rel_outdir = (request.data.get('outdir') or 'downloads').strip()
     rel_mail = (request.data.get('mail') or '').strip()
+    folder_id_raw = request.data.get('folder_id')
+    target_folder_id = None
 
     base_dir = getattr(settings, 'DOWNLOADS_BASE_DIR', os.path.join(settings.BASE_DIR, 'downloads'))
     os.makedirs(base_dir, exist_ok=True)
@@ -60,6 +62,19 @@ def downloads_start(request):
     log_file = tempfile.NamedTemporaryFile(prefix='download_', suffix='.log', dir=log_dir, delete=False)
     log_file_path = log_file.name
     log_file.close()
+
+    try:
+        with open(log_file_path, 'a', encoding='utf-8', buffering=1) as lf_init:
+            lf_init.write('[ND] Accepted\n')
+            lf_init.write(f"[ND] Output: {outdir}\n")
+            if rel_mail:
+                lf_init.write(f"[ND] Mail param: {rel_mail}\n")
+            elif url:
+                lf_init.write(f"[ND] URL param: {url}\n")
+            else:
+                lf_init.write('[ND] Mail/URL params via body text\n')
+    except Exception:
+        pass
 
     # If URL is provided but mail file not specified, create a temp mail file
     mail_path = None
@@ -120,26 +135,185 @@ def downloads_start(request):
             'log': log_file_path,
         }, status=status.HTTP_202_ACCEPTED)
 
-    # Build command: python download_nd.py -o <outdir> -m <mail>
-    python_bin = os.environ.get('PYTHON_BIN') or 'python3'
-    cmd = [python_bin, script_path, '-o', outdir]
-    if mail_path:
-        cmd.extend(['-m', mail_path])
-    env = os.environ.copy()
-    if url:
-        env['DOWNLOAD_URL'] = url  # script currently reads mail; URL can be used in future
+    def run_nd_task(mail_fp: str, out_dir: str, log_path: str, user_id: int | None, folder_id: int | None):
+        lnd_path = getattr(settings, 'LND_PATH', os.environ.get('LND_PATH')) or '/home/mosserver/software/linuxnd'
+        try:
+            with open(log_path, 'a', encoding='utf-8', buffering=1) as lf:
+                lf.write('[ND] Start\n')
+                os.makedirs(out_dir, exist_ok=True)
+                user = ''
+                passwd = ''
+                dirpath = ''
+                try:
+                    with open(mail_fp, 'r', encoding='utf-8', errors='ignore') as fi:
+                        for line in fi:
+                            s = line.strip()
+                            if s.startswith('登录账号：'):
+                                user = s[5:]
+                            elif s.startswith('登录密码：'):
+                                passwd = s[5:]
+                            elif s.startswith('数据路径为：'):
+                                dirpath = s[6:]
+                except Exception as exc:
+                    lf.write(f"[ND] ERROR: read mail failed: {exc}\n")
+                    lf.write('[ND] Completed 100%\n')
+                    return
+                if dirpath.endswith('/'):
+                    dirpath = dirpath[:-1]
+                batch_dir = os.path.basename(dirpath) or 'batch'
+                work_dir = os.path.join(out_dir, batch_dir)
+                os.makedirs(work_dir, exist_ok=True)
+                lf.write(f"[ND] Using lnd at {lnd_path}/lnd\n")
+                lnd_bin = os.path.join(lnd_path, 'lnd')
+                if not (os.path.exists(lnd_bin) and os.access(lnd_bin, os.X_OK)):
+                    lf.write(f"[ND] ERROR: lnd not executable at {lnd_bin}\n")
+                    lf.write('[ND] Completed 100%\n')
+                    return
+                try:
+                    import subprocess
+                    login_cmd = [lnd_bin, 'login', '-u', user, '-p', passwd]
+                    lf.write(' '.join(login_cmd) + "\n")
+                    try:
+                        p = subprocess.run(login_cmd, cwd=work_dir, stdout=lf, stderr=lf, timeout=60)
+                        lf.write(f"[ND] login rc={p.returncode}\n")
+                        lf.write('progress: 15%\n')
+                    except subprocess.TimeoutExpired:
+                        lf.write('[ND] ERROR: login timeout\n')
+                        lf.write('[ND] Completed 100%\n')
+                        return
+                    list_cmd = [lnd_bin, 'list', f"oss://{dirpath}"]
+                    lf.write(' '.join(list_cmd) + "\n")
+                    out = subprocess.run(list_cmd, cwd=work_dir, capture_output=True, timeout=120)
+                    listing = ''
+                    try:
+                        listing = out.stdout.decode('utf-8', errors='ignore')
+                    except Exception:
+                        listing = ''
+                    lf.write(f"[ND] list rc={out.returncode}\n")
+                    with open(os.path.join(work_dir, 'file.list'), 'w', encoding='utf-8') as fl:
+                        fl.write(listing)
+                    lf.write('[ND] list fetched\n')
+                    lf.write('progress: 20%\n')
+                    files = []
+                    md5s = ''
+                    with open(os.path.join(work_dir, 'file.list'), 'r', encoding='utf-8', errors='ignore') as fl:
+                        for ln in fl:
+                            cols = ln.strip().split('\t')
+                            last = cols[-1]
+                            if last.endswith('fastq.gz') or last.endswith('fq.gz'):
+                                if last.startswith('/'):
+                                    last = last[1:]
+                                files.append(last)
+                            if ('md5' in last or 'MD5' in last) and last.endswith('txt'):
+                                md5s = last
+                    if not md5s:
+                        lf.write('[ND] not find MD5 file, download with no MD5 checking\n')
+                    else:
+                        lf.write(f"[ND] found MD5 file: {md5s}\n")
+                        try:
+                            subprocess.run([lnd_bin, 'cp', f"oss://{dirpath}{md5s}", '.' ], cwd=work_dir, stdout=lf, stderr=lf, timeout=300)
+                        except subprocess.TimeoutExpired:
+                            lf.write('[ND] WARN: md5 copy timeout, continue\n')
+                    if not files:
+                        lf.write('[ND] WARN: no fastq/fq files found in list\n')
+                    target_folder = None
+                    if user_id:
+                        try:
+                            from django.contrib.auth import get_user_model
+                            from file_upload.models import File as FileModel, Folder as FolderModel
+                            U = get_user_model()
+                            user_obj = U.objects.get(id=user_id)
+                            if folder_id:
+                                try:
+                                    target_folder = FolderModel.objects.get(id=folder_id, user=user_obj)
+                                except Exception:
+                                    target_folder, _ = FolderModel.objects.get_or_create(user=user_obj, parent=None, name='Download')
+                            else:
+                                target_folder, _ = FolderModel.objects.get_or_create(user=user_obj, parent=None, name='Download')
+                        except Exception as exc:
+                            target_folder = None
+                    for f in files:
+                        subdir = os.path.dirname(f)
+                        if subdir:
+                            os.makedirs(os.path.join(work_dir, subdir), exist_ok=True)
+                        lf.write(f"lnd cp oss://{dirpath}/{f} {subdir}\n")
+                        try:
+                            subprocess.run([lnd_bin, 'cp', f"oss://{dirpath}/{f}", subdir or '.' ], cwd=work_dir, stdout=lf, stderr=lf, timeout=3600)
+                        except subprocess.TimeoutExpired:
+                            lf.write(f"[ND] ERROR: timeout copying {f}\n")
+                        lf.write(f"{f} is OK\n")
+                        if user_id and target_folder:
+                            try:
+                                from django.core.files import File as DjangoFile
+                                from django.contrib.auth import get_user_model
+                                from file_upload.models import File as FileModel
+                                U = get_user_model()
+                                user_obj = U.objects.get(id=user_id)
+                                abs_path = os.path.join(work_dir, f)
+                                base_name = os.path.basename(f)
+                                if os.path.exists(abs_path):
+                                    exists = FileModel.objects.filter(user=user_obj, parent_folder=target_folder, original_filename=base_name).exists()
+                                    if not exists:
+                                        with open(abs_path, 'rb') as fh:
+                                            djf = DjangoFile(fh, name=base_name)
+                                            rec = FileModel(user=user_obj, upload_method='download', parent_folder=target_folder, original_filename=base_name, title=base_name, access_level='Internal', document_type='Dataset')
+                                            rec.file = djf
+                                            rec.save()
+                                        lf.write(f"[ND] registered {base_name}\n")
+                            except Exception as exc:
+                                lf.write(f"[ND] ERROR: register failed for {f}: {exc}\n")
+                    lf.write('[ND] Completed 100%\n')
+                except Exception as exc:
+                    lf.write(f"[ND] ERROR: {exc}\n")
+                    lf.write('[ND] Completed 100%\n')
+        except Exception:
+            try:
+                with open(log_path, 'a', encoding='utf-8', buffering=1) as lf:
+                    lf.write('[ND] ERROR: unexpected failure\n')
+                    lf.write('[ND] Completed 100%\n')
+            except Exception:
+                pass
 
+    if not mail_path:
+        default_mail = os.path.join(settings.BASE_DIR, 'mail.txt')
+        if os.path.exists(default_mail):
+            mail_path = default_mail
+        else:
+            mt = (request.data.get('mail_text') or '').strip()
+            if mt:
+                tmpm = tempfile.NamedTemporaryFile('w', prefix='mail_', suffix='.txt', dir=log_dir, delete=False)
+                tmpm.write(mt + "\n")
+                tmpm.flush()
+                tmpm.close()
+                mail_path = tmpm.name
+            else:
+                return Response({'message': 'mail not provided'}, status=status.HTTP_400_BAD_REQUEST)
+    if folder_id_raw is not None:
+        try:
+            fid = int(folder_id_raw)
+            from file_upload.models import Folder as FolderModel
+            q = FolderModel.objects.filter(id=fid, user=request.user)
+            if q.exists():
+                target_folder_id = fid
+        except Exception:
+            target_folder_id = None
     try:
-        with open(log_file_path, 'a', buffering=1) as lf:
-            proc = subprocess.Popen(cmd, stdout=lf, stderr=lf, cwd=settings.BASE_DIR, env=env)
-    except OSError as exc:
-        return Response({'message': f'Failed to start download: {exc}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        with open(log_file_path, 'a', encoding='utf-8', buffering=1) as lf_init2:
+            lf_init2.write(f"[ND] Thread scheduling with mail: {mail_path}\n")
+            lf_init2.write(f"[ND] Target folder id: {target_folder_id if target_folder_id else 'auto'}\n")
+    except Exception:
+        pass
+    t = threading.Thread(target=run_nd_task, args=(mail_path, outdir, log_file_path, getattr(request.user, 'id', None), target_folder_id), daemon=True)
+    t.start()
+    try:
+        with open(log_file_path, 'a', encoding='utf-8', buffering=1) as lf_init3:
+            lf_init3.write("[ND] Thread started\n")
+    except Exception:
+        pass
     return Response({
         'status': 'accepted',
         'message': 'Submitted.',
         'provider': 'Huawei/NovoCloud',
-        'pid': proc.pid,
         'log': log_file_path,
         'cwd': outdir,
     }, status=status.HTTP_202_ACCEPTED)
@@ -201,6 +375,11 @@ def downloads_status(request):
             percent = 100
         if (total_bytes and downloaded_bytes and downloaded_bytes < total_bytes) and percent >= 100:
             percent = 99
+        try:
+            if 'Completed 100%' in text:
+                percent = 100
+        except Exception:
+            pass
         return Response({
             'lines': lines,
             'text': text,
@@ -234,8 +413,13 @@ def _tail_lines(path: str, n: int):
 
 
 def _heuristic_progress(text: str) -> int:
-    # Simple heuristics for download_nd.py outputs
-    # count occurrences of 'cp ' completed lines and md5 OK
+    """Heuristically infer overall percent from mixed logs.
+
+    Supports:
+    - Huawei obsutil and lnd commands (count commands vs. OK lines)
+    - Generic percent hints like "progress: 35.5%" or "35%" anywhere in text
+    - Falls back to 0 if nothing useful is present
+    """
     total = 0
     done = 0
     for line in text.splitlines():
@@ -243,19 +427,45 @@ def _heuristic_progress(text: str) -> int:
             total += 1
         if line.strip().endswith('is OK') or ('already found' in line):
             done += 1
-    if total == 0:
-        # try detect percent-like hints
-        import re
-        m = re.search(r'(\d{1,3})%$', text)
-        if m:
+
+    import re
+    if total > 0:
+        current_pct = None
+        lines = text.splitlines()
+        for ln in reversed(lines):
+            if ('MB/' in ln) or ('GB/' in ln) or ('fastq.gz' in ln) or ('fq.gz' in ln):
+                m = re.search(r"(\d{1,3})(?:\.\d+)?\s*%", ln)
+                if m:
+                    try:
+                        current_pct = int(float(m.group(1)))
+                        break
+                    except Exception:
+                        current_pct = None
+        try:
+            base = int((done * 100) / total)
+        except Exception:
+            base = 0
+        if current_pct is not None:
             try:
-                p = int(m.group(1))
-                return max(0, min(p, 100))
+                p = int(((done + (current_pct / 100.0)) * 100) / total)
             except Exception:
-                pass
-        return 0
-    p = int((done * 100) / total) if total > 0 else 0
-    return max(0, min(p, 99))
+                p = base
+        else:
+            p = base
+        if done >= total and total > 0:
+            return 100
+        return max(0, min(p, 99))
+
+    percents = []
+    for m in re.finditer(r"(\d{1,3})(?:\.\d+)?\s*%", text, re.IGNORECASE):
+        try:
+            percents.append(int(m.group(1)))
+        except Exception:
+            pass
+    if percents:
+        p = percents[-1]
+        return max(0, min(p, 100))
+    return 0
 
 
 def _estimate_stats(lines: list[str]):
@@ -291,10 +501,13 @@ def _estimate_stats(lines: list[str]):
                 ts = datetime.datetime.strptime(tm.group(1), "%Y-%m-%d %H:%M:%S")
             except Exception:
                 ts = None
-        pm = re.search(r"Progress\s+(\d+)%", ln)
+        # progress percent like "Progress 35%", "progress: 35.5%" or "... 35% complete"
+        pm = re.search(r"(Progress\s+|progress:\s*|)\s*(\d{1,3})(?:\.\d+)?%", ln)
         if pm:
             try:
-                p = int(pm.group(1))
+                # number may be in group(1) or group(2) depending on regex branch
+                p_str = pm.group(2) if pm.lastindex and pm.lastindex >= 2 else pm.group(1)
+                p = int(p_str)
                 if total:
                     b = int((p * total) / 100)
                     ts_prog.append((ts, b))
@@ -304,13 +517,38 @@ def _estimate_stats(lines: list[str]):
                     last_prog = p
             except Exception:
                 pass
-        dm = re.search(r"Downloaded\s+(\d+)\s+MB", ln)
+        # bytes hints like "Downloaded 123 MB" or "123.4 MB/s"
+        dm = re.search(r"Downloaded\s+(\d+)(?:\.\d+)?\s+(KB|MB|GB)", ln)
         if dm:
             try:
-                mb = int(dm.group(1))
-                b = mb * 1024 * 1024
+                val = float(dm.group(1))
+                unit = (dm.group(2) or 'MB').upper()
+                mult = 1024
+                if unit == 'KB':
+                    b = int(val * mult)
+                elif unit == 'MB':
+                    b = int(val * mult * mult)
+                else:  # GB
+                    b = int(val * mult * mult * mult)
                 ts_prog.append((ts, b))
                 last_bytes = b
+            except Exception:
+                pass
+        # speed lines like "Average Speed: 12.3 MB/s" or "Speed 1234 KB/s"
+        sm = re.search(r"(Speed|Average Speed)[:\s]+(\d+(?:\.\d+)?)\s*(KB|MB|GB)/s", ln, re.IGNORECASE)
+        if sm:
+            try:
+                sval = float(sm.group(2))
+                sunit = (sm.group(3) or 'MB').upper()
+                mult = 1024
+                if sunit == 'KB':
+                    sbytes = int(sval * mult)
+                elif sunit == 'MB':
+                    sbytes = int(sval * mult * mult)
+                else:  # GB
+                    sbytes = int(sval * mult * mult * mult)
+                # prefer the parsed speed if we cannot compute later
+                speed = sbytes
             except Exception:
                 pass
         if ts:

@@ -8,7 +8,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # 允许通过环境变量覆盖默认端口
 FRONTEND_PORT="${FRONTEND_PORT:-5173}"
-BACKEND_PORT="${BACKEND_PORT:-8000}"
+# 将后端默认端口调整为 8020，与前端代理一致
+BACKEND_PORT="${BACKEND_PORT:-8020}"
 
 LOG_DIR="$REPO_ROOT/logs"
 PID_DIR="$REPO_ROOT/.pids"
@@ -21,6 +22,7 @@ mkdir -p "$LOG_DIR" "$PID_DIR"
 
 # 将用户本地可执行目录加入 PATH，便于解析 ~/.local/bin/cellxgene
 export PATH="$HOME/.local/bin:$PATH"
+export LND_PATH="${LND_PATH:-/home/mosserver/software/linuxnd}"
 
 # 解析并导出 Cellxgene 路径与用于布局生成的 Python 解释器
 # 允许外部覆盖：若环境已设置则保持不变

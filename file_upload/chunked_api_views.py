@@ -39,9 +39,13 @@ def chunked_upload_init(request):
     parent_folder = None
     if parent_folder_id:
         try:
-            parent_folder = Folder.objects.get(id=parent_folder_id, user=request.user)
+            parent_folder = Folder.objects.get(id=parent_folder_id)
         except Folder.DoesNotExist:
             return Response({'message': '父文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
+        # 可见性校验（允许个人或所在组织文件夹）
+        from .permission_utils import can_view_folder
+        if not can_view_folder(request.user, parent_folder):
+            return Response({'message': '无权限访问父文件夹'}, status=status.HTTP_403_FORBIDDEN)
 
     tmp_dir = _get_tmp_dir(request.user.id)
     session_id = uuid.uuid4().hex
@@ -135,12 +139,25 @@ def chunked_upload_complete(request, session_id):
         with open(session.temp_path, 'rb') as fp:
             django_file = DjangoFile(fp, name=session.original_filename)
             file_obj = File(
-                user=request.user, 
-                upload_method='Chunked Upload', 
+                user=request.user,
+                upload_method='Chunked Upload',
                 original_filename=session.original_filename,
                 parent_folder=session.parent_folder
             )
+            # 若父文件夹属于组织，则强制设置为组织可见（Restricted）并继承组织
+            try:
+                if session.parent_folder and getattr(session.parent_folder, 'organization', None):
+                    file_obj.access_level = 'Restricted'
+            except Exception:
+                pass
             file_obj.file.save(session.original_filename, django_file, save=True)
+            # 保存后再补充组织继承
+            try:
+                if session.parent_folder and getattr(session.parent_folder, 'organization', None):
+                    file_obj.parent_folder = session.parent_folder
+                    file_obj.save(update_fields=['parent_folder', 'access_level'])
+            except Exception:
+                pass
     except Exception:
         return Response({'message': '写入文件失败'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

@@ -13,6 +13,7 @@ urlpatterns = [
     path('ncbi/import/', api_views.ncbi_import, name='api_file_ncbi_import'),
     path('<int:file_id>/delete/', api_views.file_delete, name='api_file_delete'),
     path('<int:file_id>/download/', api_views.file_download, name='api_file_download'),
+    path('<int:file_id>/', api_views.file_detail, name='api_file_detail'),
     # 兼容旧路径：/api/files/download/<id>/
     path('download/<int:file_id>/', api_views.file_download, name='api_file_download_legacy'),
     # 发布到 Cellxgene（将指定文件复制到 Cellxgene 数据目录）
@@ -41,4 +42,7 @@ urlpatterns = [
     path('shares/create/', api_views.file_share_create, name='api_file_share_create'),
     path('shares/', api_views.file_share_list, name='api_file_share_list'),
     path('shares/<int:share_id>/delete/', api_views.file_share_delete, name='api_file_share_delete'),
+    # 接受共享（保存到我的文件）
+    path('accept/file/', api_views.accept_shared_file, name='api_accept_shared_file'),
+    path('accept/folder/', api_views.accept_shared_folder, name='api_accept_shared_folder'),
 ]
