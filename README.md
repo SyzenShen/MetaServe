@@ -79,7 +79,7 @@ cd ../..
 make copy-client-assets
 
 source .venv/bin/activate
-python manage.py runserver 0.0.0.0:8000
+python manage.py runserver 0.0.0.0:8020
 
 # 新终端 second terminal
 cd frontend
@@ -88,7 +88,7 @@ npm run dev -- --host --port 5173 --strictPort
 
 浏览器访问 http://localhost:5173。亦可使用 `scripts/start_services.sh` / `scripts/stop_services.sh` 统一管理进程。
 
-> 后端默认端口现为 `8000`，如被占用可暂用 `8001` 启动；本项目已将服务迁回 `8000`，前端和脚本请默认对接 `http://localhost:8000/`。
+> 开发环境后端端口为 `8020`（与 Vite 代理一致），生产或单机默认使用 `8000`。前端与测试页建议使用相对路径 `/api/...`，避免端口漂移；如果在纯 HTML 测试页中需要显式地址，请将 `API_BASE` 设置为 `http://localhost:8020`。
 
 ---
 
