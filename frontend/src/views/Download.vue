@@ -1,5 +1,6 @@
 <template>
   <div class="download-page">
+    <div class="content-layout">
     <div class="download-card">
       <h1 class="title">Download</h1>
       <p class="helper">Paste an NCBI / Huawei Cloud / NovoCloud link; the system will auto-detect the source.</p>
@@ -49,13 +50,41 @@
         </div>
       </div>
     </div>
+    <div class="jobs-panel">
+      <div class="jobs-header">
+        <h3 class="jobs-title">下载任务</h3>
+        <button class="btn sm" @click="refreshJobs" :disabled="jobsLoading">刷新</button>
+      </div>
+      <div class="jobs-list">
+        <div v-if="jobsLoading" class="jobs-empty">加载中...</div>
+        <div v-else-if="jobs.length===0" class="jobs-empty">暂无任务</div>
+        <div v-else class="jobs-items">
+          <div v-for="j in jobs" :key="j.id" class="job-item">
+            <div class="job-main">
+              <div class="job-name">{{ j.file_name || j.task_name }}</div>
+              <div class="job-meta">{{ formatTime(j.created_at) }}</div>
+            </div>
+            <div class="job-right">
+              <span :class="['badge', statusClass(j.task_status)]">{{ statusText(j.task_status) }}</span>
+              <div class="job-actions">
+                <button class="btn sm secondary" @click="viewLogs(j)">日志</button>
+                <button class="btn sm" @click="retryJob(j)" :disabled="j.task_status===1">重试</button>
+                <button class="btn sm cancel" @click="cancelJob(j)" :disabled="j.task_status!==1">取消</button>
+                <button class="btn sm cancel" @click="deleteJob(j)" :disabled="j.task_status===1">删除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
   </div>
 </template>
 <script>
 import axios from 'axios'
 export default {
   name: 'Download',
-  data(){return{url:'',outdir:'downloads',msg:'',err:false,loading:false,logPath:'',progressVisible:false,progress:0,poller:null,pollIntervalMs:1000,speedBps:0,etaSeconds:null,pid:null,showOutdirDialog:false,tmpOutdir:'downloads',folderOptions:[],selectedFolderPath:'',newFolderName:'',creating:false,folderCreateError:'',showCreateInput:false,debug:false}},
+  data(){return{url:'',outdir:'downloads',msg:'',err:false,loading:false,logPath:'',progressVisible:false,progress:0,poller:null,pollIntervalMs:1000,speedBps:0,etaSeconds:null,pid:null,showOutdirDialog:false,tmpOutdir:'downloads',folderOptions:[],selectedFolderPath:'',newFolderName:'',creating:false,folderCreateError:'',showCreateInput:false,debug:false,jobs:[],jobsLoading:false,jobsPoller:null}},
   created(){
     try{
       const savedOut = localStorage.getItem('downloadOutdir')
@@ -96,6 +125,8 @@ export default {
         this.beginPolling()
       }
     }catch(e){/* ignore */}
+    this.refreshJobs()
+    this.beginJobsPolling()
   },
   beforeUnmount(){
     const main = document.querySelector('main.container')
@@ -103,6 +134,7 @@ export default {
       main.classList.remove('download-full-bleed')
     }
     if(this.poller) clearInterval(this.poller)
+    if(this.jobsPoller) clearInterval(this.jobsPoller)
   },
   watch:{
     url(newVal){
@@ -404,11 +436,86 @@ export default {
       this.progressVisible=false;
       try{localStorage.removeItem('downloadSession')}catch(e){}
     },
+    async refreshJobs(){
+      try{
+        this.jobsLoading = true
+        const {data} = await axios.get('/api/downloads/jobs/')
+        this.jobs = Array.isArray(data?.jobs) ? data.jobs : []
+      }catch(e){
+        this.jobs = []
+      }finally{
+        this.jobsLoading = false
+      }
+    },
+    beginJobsPolling(){
+      if(this.jobsPoller) clearInterval(this.jobsPoller)
+      this.jobsPoller = setInterval(() => { this.refreshJobs() }, 3000)
+    },
+    statusText(s){
+      if(s===0) return '待处理'
+      if(s===1) return '进行中'
+      if(s===2) return '完成'
+      if(s===3) return '失败'
+      return ''
+    },
+    statusClass(s){
+      if(s===0) return 'badge-pending'
+      if(s===1) return 'badge-running'
+      if(s===2) return 'badge-success'
+      if(s===3) return 'badge-failed'
+      return ''
+    },
+    formatTime(t){
+      try{
+        const d = new Date(t)
+        const y = d.getFullYear()
+        const m = String(d.getMonth()+1).padStart(2,'0')
+        const dd = String(d.getDate()).padStart(2,'0')
+        const hh = String(d.getHours()).padStart(2,'0')
+        const mm = String(d.getMinutes()).padStart(2,'0')
+        return `${y}-${m}-${dd} ${hh}:${mm}`
+      }catch(e){return ''}
+    },
+    async viewLogs(j){
+      if(!j?.id) return
+      try{
+        const {data} = await axios.get(`/api/downloads/jobs/${j.id}/logs/`, { params: { n: 100 } })
+        const text = data?.text || ''
+        alert(text || '无日志')
+      }catch(e){
+        alert('读取日志失败')
+      }
+    },
+    async retryJob(j){
+      if(!j?.id) return
+      try{
+        await axios.post(`/api/downloads/jobs/${j.id}/retry/`)
+        this.refreshJobs()
+      }catch(e){}
+    },
+    async cancelJob(j){
+      if(!j?.id) return
+      try{
+        await axios.post(`/api/downloads/jobs/${j.id}/cancel/`)
+        this.refreshJobs()
+      }catch(e){}
+    },
+    async deleteJob(j){
+      if(!j?.id) return
+      try{
+        await axios.delete(`/api/downloads/jobs/${j.id}/delete/`)
+        this.refreshJobs()
+      }catch(e){
+        const msg = e?.response?.data?.detail || e?.response?.data?.message || '删除失败'
+        alert(msg)
+      }
+    },
   }
 }
 </script>
 <style scoped>
 .download-page{width:100%;min-height:calc(100vh - 72px);padding:8px 12px;background:#fff;--primary: rgb(58, 126, 185);--primary-hover: rgb(45, 102, 150);display:flex;justify-content:center;align-items:flex-start;box-sizing:border-box}
+.content-layout{display:grid;grid-template-columns: 2fr 1fr;gap:16px;width:100%;max-width:1600px}
 .title{margin:0 0 12px 0;color:var(--waves-text-corporate, #1f2937);font-size:22px;font-weight:650;padding:0}
 
 /* 卡片容器，使输入区域更大并更醒目 */
@@ -420,7 +527,7 @@ export default {
   padding: 0px 0px; /* 恢复左右内边距，文字不贴边 */
   min-height: 760px;
   width: 100%;
-  max-width: 3260px; /* 框更小，参考 Files 页体量 */
+  max-width: 100%;
   display:flex;
   flex-direction:column;
  }
@@ -494,3 +601,20 @@ export default {
   background: #fff !important;
 }
 </style>
+.jobs-panel{background:#fff;border-radius:var(--radius-sm);border:1px solid var(--waves-border-subtle, #cbd5e1);padding:12px;min-height:760px}
+.jobs-header{display:flex;align-items:center;justify-content:space-between}
+.jobs-title{margin:0;font-size:18px;font-weight:650;color:#1f2937}
+.jobs-list{margin-top:8px}
+.jobs-empty{color:#6b7280;font-size:13px;padding:8px}
+.jobs-items{display:flex;flex-direction:column;gap:10px}
+.job-item{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--waves-border-subtle, #e5e7eb);padding:8px;border-radius:8px}
+.job-main{display:flex;flex-direction:column;gap:2px}
+.job-name{font-size:14px;font-weight:600;color:#111827}
+.job-meta{font-size:12px;color:#6b7280}
+.job-right{display:flex;align-items:center;gap:8px}
+.job-actions{display:flex;align-items:center;gap:6px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+.badge-pending{background:#f3f4f6;color:#374151}
+.badge-running{background:#dbeafe;color:#1d4ed8}
+.badge-success{background:#dcfce7;color:#16a34a}
+.badge-failed{background:#fee2e2;color:#b91c1c}

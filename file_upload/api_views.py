@@ -1176,7 +1176,20 @@ def folder_detail(request, folder_id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == 'DELETE':
-        # 检查文件夹是否为空
+        # 优先清理“孤儿文件”（物理文件缺失或大小为0），便于删除空目录
+        try:
+            orphan_ids = []
+            for f in folder.files.all():
+                fp_missing = (not getattr(f, 'file', None)) or (getattr(f, 'file', None) and not os.path.exists(f.file.path))
+                zero_size = (getattr(f, 'file_size', 0) or 0) == 0
+                if fp_missing or zero_size:
+                    orphan_ids.append(f.id)
+            if orphan_ids:
+                from .models import File as FileModel
+                FileModel.objects.filter(id__in=orphan_ids).delete()
+        except Exception:
+            pass
+        # 再次检查是否为空
         if folder.subfolders.exists() or folder.files.exists():
             return Response({'error': '文件夹不为空，无法删除'}, status=status.HTTP_400_BAD_REQUEST)
         # 只有拥有者或组织 owner/admin 可删除

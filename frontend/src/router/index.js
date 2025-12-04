@@ -86,10 +86,15 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   
+  if (to.path === '/' && authStore.isAuthenticated) {
+    next('/files')
+    return
+  }
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    next('/')
+    next('/files')
   } else {
     next()
   }

@@ -225,17 +225,24 @@ class FolderSerializer(serializers.ModelSerializer):
         return obj.files.count()
 
     def get_folder_size(self, obj):
-        """计算文件夹总大小（包括子文件夹）"""
-        def calculate_folder_size(folder):
-            # 计算当前文件夹中所有文件的大小
-            files_size = sum(file.file_size or 0 for file in folder.files.all())
-            
-            # 递归计算子文件夹的大小
-            subfolders_size = sum(calculate_folder_size(subfolder) for subfolder in folder.subfolders.all())
-            
-            return files_size + subfolders_size
-        
-        return calculate_folder_size(obj)
+        visited = set()
+        def calculate(folder, depth=0):
+            try:
+                fid = getattr(folder, 'id', None)
+                if fid is not None:
+                    if fid in visited:
+                        return 0
+                    visited.add(fid)
+                if depth > 100:
+                    return 0
+                files_size = sum((getattr(file, 'file_size', 0) or 0) for file in folder.files.all())
+                subfolders_size = 0
+                for sub in folder.subfolders.all():
+                    subfolders_size += calculate(sub, depth + 1)
+                return files_size + subfolders_size
+            except Exception:
+                return 0
+        return calculate(obj)
 
     def get_organization_name(self, obj):
         return obj.organization.name if getattr(obj, 'organization', None) else None
