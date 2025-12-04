@@ -630,8 +630,8 @@ def _schedule_job(job: DownloadJob):
             job.save(update_fields=['task_status', 'updated_at'])
     def _wrap_nd():
         try:
-            run_nd_task(mail_path, outdir, log_file_path, getattr(job.creator, 'id', None), target_folder_id)
-            job.task_status = 2
+            ok = run_nd_task(mail_path, outdir, log_file_path, getattr(job.creator, 'id', None), target_folder_id)
+            job.task_status = 2 if ok else 3
         except Exception:
             job.task_status = 3
         finally:
@@ -685,7 +685,7 @@ def run_nd_task(mail_fp: str, out_dir: str, log_path: str, user_id=None, folder_
                 except subprocess.TimeoutExpired:
                     lf.write('[ND] ERROR: login timeout\n')
                     lf.write('[ND] Completed 100%\n')
-                    return
+                    return False
                 list_cmd = [lnd_bin, 'list', f"oss://{dirpath}"]
                 lf.write(' '.join(list_cmd) + "\n")
                 out = subprocess.run(list_cmd, cwd=work_dir, capture_output=True, timeout=120)
@@ -721,6 +721,7 @@ def run_nd_task(mail_fp: str, out_dir: str, log_path: str, user_id=None, folder_
                         lf.write('[ND] WARN: md5 copy timeout, continue\n')
                 if not files:
                     lf.write('[ND] WARN: no fastq/fq files found in list\n')
+                downloaded_count = 0
                 target_folder = None
                 if user_id:
                     try:
@@ -747,6 +748,7 @@ def run_nd_task(mail_fp: str, out_dir: str, log_path: str, user_id=None, folder_
                     except subprocess.TimeoutExpired:
                         lf.write(f"[ND] ERROR: timeout copying {f}\n")
                     lf.write(f"{f} is OK\n")
+                    downloaded_count += 1
                     if user_id and target_folder:
                         try:
                             from django.core.files import File as DjangoFile
@@ -768,9 +770,11 @@ def run_nd_task(mail_fp: str, out_dir: str, log_path: str, user_id=None, folder_
                         except Exception as exc:
                             lf.write(f"[ND] ERROR: register failed for {f}: {exc}\n")
                 lf.write('[ND] Completed 100%\n')
+                return downloaded_count > 0
             except Exception as exc:
                 lf.write(f"[ND] ERROR: {exc}\n")
                 lf.write('[ND] Completed 100%\n')
+                return False
     except Exception:
         try:
             with open(log_path, 'a', encoding='utf-8', buffering=1) as lf:
@@ -778,3 +782,4 @@ def run_nd_task(mail_fp: str, out_dir: str, log_path: str, user_id=None, folder_
                 lf.write('[ND] Completed 100%\n')
         except Exception:
             pass
+    return False

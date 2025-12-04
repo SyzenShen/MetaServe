@@ -1176,7 +1176,6 @@ def folder_detail(request, folder_id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == 'DELETE':
-        # 优先清理“孤儿文件”（物理文件缺失或大小为0），便于删除空目录
         try:
             orphan_ids = []
             for f in folder.files.all():
@@ -1189,9 +1188,6 @@ def folder_detail(request, folder_id):
                 FileModel.objects.filter(id__in=orphan_ids).delete()
         except Exception:
             pass
-        # 再次检查是否为空
-        if folder.subfolders.exists() or folder.files.exists():
-            return Response({'error': '文件夹不为空，无法删除'}, status=status.HTTP_400_BAD_REQUEST)
         # 只有拥有者或组织 owner/admin 可删除
         if folder.user_id != request.user.id:
             try:
@@ -1203,7 +1199,34 @@ def folder_detail(request, folder_id):
                     return Response({'error': '无权限删除该文件夹'}, status=status.HTTP_403_FORBIDDEN)
             except Exception:
                 return Response({'error': '无权限删除该文件夹'}, status=status.HTTP_403_FORBIDDEN)
-        folder.delete()
+        to_visit = [folder]
+        folders = []
+        files = []
+        while to_visit:
+            cur = to_visit.pop()
+            folders.append(cur)
+            for sf in cur.subfolders.all():
+                to_visit.append(sf)
+            for fl in cur.files.all():
+                files.append(fl)
+        for fl in files:
+            try:
+                if getattr(fl, 'file', None) and os.path.exists(fl.file.path):
+                    try:
+                        os.remove(fl.file.path)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            try:
+                fl.delete()
+            except Exception:
+                pass
+        for fd in reversed(folders):
+            try:
+                fd.delete()
+            except Exception:
+                pass
         return Response({'message': '文件夹删除成功'}, status=status.HTTP_204_NO_CONTENT)
 
 

@@ -5,7 +5,7 @@
       <h1 class="title">Download</h1>
       <p class="helper">Paste an NCBI / Huawei Cloud / NovoCloud link; the system will auto-detect the source.</p>
       <div class="row">
-        <textarea v-model.trim="url" placeholder="Paste the download link here" class="input textarea"></textarea>
+        <textarea ref="urlInput" v-model.trim="url" placeholder="Paste the download link here" class="input textarea"></textarea>
         <div class="actions">
           <button :disabled="!url || loading" @click="openOutdirDialog" class="btn">Start</button>
           <div v-if="progressVisible" class="progress-wrap">
@@ -52,25 +52,57 @@
     </div>
     <div class="jobs-panel">
       <div class="jobs-header">
-        <h3 class="jobs-title">下载任务</h3>
-        <button class="btn sm" @click="refreshJobs" :disabled="jobsLoading">刷新</button>
+        <div class="jobs-actions">
+          <button class="btn sm" @click="focusUrlInput">下载任务</button>
+          <button class="btn sm" @click="refreshJobs" :disabled="jobsLoading">刷新</button>
+        </div>
+        <div class="jobs-filter">
+          <button class="filter-btn" :class="{active: statusFilter==='all'}" @click="statusFilter='all'">全部</button>
+          <button class="filter-btn" :class="{active: statusFilter===1}" @click="statusFilter=1">进行中</button>
+          <button class="filter-btn" :class="{active: statusFilter===3}" @click="statusFilter=3">失败</button>
+          <button class="filter-btn" :class="{active: statusFilter===2}" @click="statusFilter=2">已完成</button>
+        </div>
       </div>
       <div class="jobs-list">
         <div v-if="jobsLoading" class="jobs-empty">加载中...</div>
         <div v-else-if="jobs.length===0" class="jobs-empty">暂无任务</div>
         <div v-else class="jobs-items">
-          <div v-for="j in jobs" :key="j.id" class="job-item">
-            <div class="job-main">
-              <div class="job-name">{{ j.file_name || j.task_name }}</div>
-              <div class="job-meta">{{ formatTime(j.created_at) }}</div>
+          <div v-for="j in filteredJobs" :key="j.id" class="job-item">
+            <div class="job-card-top">
+              <div class="job-main">
+                <div class="job-name">{{ j.file_name || j.task_name }}</div>
+                <div class="job-meta">{{ formatTime(j.created_at) }}</div>
+                <div v-if="j.task_status===1 && jobProgress[j.id] != null" class="mini-progress">
+                  <div class="mini-progress-bar" :style="{ width: (jobProgress[j.id] || 0) + '%' }"></div>
+                </div>
+              </div>
+              <div class="job-right">
+                <span :class="['badge', statusClass(j.task_status)]">{{ statusText(j.task_status) }}</span>
+                <div class="job-actions">
+                  <template v-if="j.task_status===1">
+                    <button class="btn sm cancel" @click="cancelJob(j)">取消</button>
+                    <button class="btn sm secondary" @click="toggleDetails(j)">详情</button>
+                  </template>
+                  <template v-else-if="j.task_status===3">
+                    <button class="btn sm" @click="retryJob(j)">重试</button>
+                    <button class="btn sm secondary" @click="toggleDetails(j)">详情</button>
+                    <button class="btn sm cancel" @click="deleteJob(j)">删除</button>
+                  </template>
+                  <template v-else-if="j.task_status===2">
+                    <button class="btn sm secondary" @click="toggleDetails(j)">详情</button>
+                    <button class="btn sm cancel" @click="deleteJob(j)">删除</button>
+                  </template>
+                  <template v-else>
+                    <button class="btn sm secondary" @click="toggleDetails(j)">详情</button>
+                    <button class="btn sm cancel" @click="deleteJob(j)">删除</button>
+                  </template>
+                </div>
+              </div>
             </div>
-            <div class="job-right">
-              <span :class="['badge', statusClass(j.task_status)]">{{ statusText(j.task_status) }}</span>
-              <div class="job-actions">
-                <button class="btn sm secondary" @click="viewLogs(j)">日志</button>
-                <button class="btn sm" @click="retryJob(j)" :disabled="j.task_status===1">重试</button>
-                <button class="btn sm cancel" @click="cancelJob(j)" :disabled="j.task_status!==1">取消</button>
-                <button class="btn sm cancel" @click="deleteJob(j)" :disabled="j.task_status===1">删除</button>
+            <div v-if="expandedJobs[j.id]" class="job-details">
+              <div class="job-details-body">
+                <div v-if="loadingLogs[j.id]" class="jobs-empty">加载详情...</div>
+                <pre v-else class="job-logs">{{ jobLogs[j.id] || '暂无详情' }}</pre>
               </div>
             </div>
           </div>
@@ -84,7 +116,7 @@
 import axios from 'axios'
 export default {
   name: 'Download',
-  data(){return{url:'',outdir:'downloads',msg:'',err:false,loading:false,logPath:'',progressVisible:false,progress:0,poller:null,pollIntervalMs:1000,speedBps:0,etaSeconds:null,pid:null,showOutdirDialog:false,tmpOutdir:'downloads',folderOptions:[],selectedFolderPath:'',newFolderName:'',creating:false,folderCreateError:'',showCreateInput:false,debug:false,jobs:[],jobsLoading:false,jobsPoller:null}},
+  data(){return{url:'',outdir:'downloads',msg:'',err:false,loading:false,logPath:'',progressVisible:false,progress:0,poller:null,pollIntervalMs:1000,speedBps:0,etaSeconds:null,pid:null,showOutdirDialog:false,tmpOutdir:'downloads',folderOptions:[],selectedFolderPath:'',newFolderName:'',creating:false,folderCreateError:'',showCreateInput:false,debug:false,jobs:[],jobsLoading:false,jobsPoller:null,statusFilter:'all',expandedJobs:{},jobLogs:{},loadingLogs:{},jobProgress:{}}},
   created(){
     try{
       const savedOut = localStorage.getItem('downloadOutdir')
@@ -172,9 +204,17 @@ export default {
       const s=Math.floor(t%60);
       const parts=[]; if(h) parts.push(`${h}小时`); if(m) parts.push(`${m}分`); parts.push(`${s}秒`);
       return parts.join(' ');
+    },
+    filteredJobs(){
+      if(this.statusFilter==='all') return this.jobs
+      return this.jobs.filter(j=>j.task_status===this.statusFilter)
     }
   },
   methods:{
+    focusUrlInput(){
+      try{ this.$refs.urlInput && this.$refs.urlInput.focus() }catch(e){}
+      try{ window.scrollTo({top:0,behavior:'smooth'}) }catch(e){}
+    },
     async acceptSharedFile(fileId){
       try{
         const token = localStorage.getItem('token')
@@ -445,6 +485,7 @@ export default {
         this.jobs = []
       }finally{
         this.jobsLoading = false
+        this.updateRunningProgress()
       }
     },
     beginJobsPolling(){
@@ -478,13 +519,7 @@ export default {
     },
     async viewLogs(j){
       if(!j?.id) return
-      try{
-        const {data} = await axios.get(`/api/downloads/jobs/${j.id}/logs/`, { params: { n: 100 } })
-        const text = data?.text || ''
-        alert(text || '无日志')
-      }catch(e){
-        alert('读取日志失败')
-      }
+      await this.toggleDetails(j)
     },
     async retryJob(j){
       if(!j?.id) return
@@ -510,6 +545,37 @@ export default {
         alert(msg)
       }
     },
+    async toggleDetails(j){
+      const id = j?.id
+      if(!id) return
+      const cur = !!this.expandedJobs[id]
+      this.$set ? this.$set(this.expandedJobs, id, !cur) : (this.expandedJobs[id] = !cur)
+      if(this.expandedJobs[id] && !this.jobLogs[id]){
+        this.$set ? this.$set(this.loadingLogs, id, true) : (this.loadingLogs[id] = true)
+        try{
+          const {data} = await axios.get(`/api/downloads/jobs/${id}/logs/`, { params: { n: 200 } })
+          const text = data?.text || ''
+          this.$set ? this.$set(this.jobLogs, id, text) : (this.jobLogs[id] = text)
+          const percent = Number(data?.percent) || 0
+          this.$set ? this.$set(this.jobProgress, id, percent) : (this.jobProgress[id] = percent)
+        }catch(e){
+          this.$set ? this.$set(this.jobLogs, id, '') : (this.jobLogs[id] = '')
+        }finally{
+          this.$set ? this.$set(this.loadingLogs, id, false) : (this.loadingLogs[id] = false)
+        }
+      }
+    },
+    async updateRunningProgress(){
+      const running = (this.jobs||[]).filter(j=>j.task_status===1)
+      const limited = running.slice(0,5)
+      await Promise.allSettled(limited.map(async j=>{
+        try{
+          const {data} = await axios.get(`/api/downloads/jobs/${j.id}/logs/`, { params: { n: 20 } })
+          const percent = Number(data?.percent) || 0
+          this.$set ? this.$set(this.jobProgress, j.id, percent) : (this.jobProgress[j.id] = percent)
+        }catch(e){}
+      }))
+    }
   }
 }
 </script>
@@ -547,6 +613,9 @@ export default {
 .textarea{min-height:300px;line-height:1.7;resize:vertical;font-size:18px;flex:1;width:100%}
 .actions{display:flex;align-items:center;gap:12px;justify-content:flex-start;margin-top:12px}
 .btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   height:56px;
   padding:0 20px;
   border-radius: var(--radius-sm);
@@ -554,11 +623,13 @@ export default {
   color:#fff;
   border:1px solid var(--primary, rgb(58, 126, 185));
   font-weight:600;
+  line-height:1 !important; /* 强制覆盖全局行高 */
+  white-space: nowrap;
 }
-.btn.sm{ height:32px; padding:0 12px; font-size:13px }
+.btn.sm{ height:32px; padding:0 12px; font-size:13px; line-height:32px !important; min-width:64px }
 .btn:not(:disabled):hover{ background: var(--primary-hover, rgb(45, 102, 150)); border-color: var(--primary-hover, rgb(45, 102, 150)); }
 .btn:disabled{opacity:.6;cursor:not-allowed}
-.btn.cancel{ background: var(--waves-error-600, #b91c1c); border-color: var(--waves-error-600, #b91c1c); height:28px; padding:0 12px; font-size:12px }
+.btn.cancel{ background: var(--waves-error-600, #b91c1c); border-color: var(--waves-error-600, #b91c1c); height:28px; padding:0 12px; font-size:12px; line-height:28px !important; min-width:64px }
 .progress-wrap{display:flex;align-items:center;gap:8px}
 .progress{width:200px;height:8px;background:#e5e7eb;border-radius:6px;overflow:hidden}
 .progress-bar{height:100%;background:var(--primary, rgb(58, 126, 185));transition:width .2s linear}
@@ -600,21 +671,31 @@ export default {
   min-height: calc(100vh - 72px) !important;
   background: #fff !important;
 }
-</style>
+/* Jobs panel styles */
 .jobs-panel{background:#fff;border-radius:var(--radius-sm);border:1px solid var(--waves-border-subtle, #cbd5e1);padding:12px;min-height:760px}
-.jobs-header{display:flex;align-items:center;justify-content:space-between}
-.jobs-title{margin:0;font-size:18px;font-weight:650;color:#1f2937}
-.jobs-list{margin-top:8px}
+.jobs-header{display:flex;flex-direction:column;gap:10px}
+.jobs-actions{display:flex;align-items:center;gap:12px}
+.jobs-filter{display:flex;align-items:center;gap:10px}
+.filter-btn{height:28px;padding:0 12px;border-radius:999px;border:1px solid var(--waves-border-subtle, #e5e7eb);background:#fff;color:#374151;font-size:12px}
+.filter-btn.active{background:#f3f4f6}
+.jobs-list{margin-top:10px}
 .jobs-empty{color:#6b7280;font-size:13px;padding:8px}
-.jobs-items{display:flex;flex-direction:column;gap:10px}
-.job-item{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--waves-border-subtle, #e5e7eb);padding:8px;border-radius:8px}
-.job-main{display:flex;flex-direction:column;gap:2px}
+.jobs-items{display:flex;flex-direction:column;gap:14px}
+.job-item{display:flex;flex-direction:column;gap:10px;border:1px solid var(--waves-border-subtle, #e5e7eb);padding:12px;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(27,44,72,0.06)}
+.job-card-top{display:flex;align-items:center;justify-content:space-between}
+.job-main{display:flex;flex-direction:column;gap:4px}
 .job-name{font-size:14px;font-weight:600;color:#111827}
 .job-meta{font-size:12px;color:#6b7280}
-.job-right{display:flex;align-items:center;gap:8px}
-.job-actions{display:flex;align-items:center;gap:6px}
+.job-right{display:flex;align-items:center;gap:12px}
+.job-actions{display:flex;align-items:center;gap:12px;flex-wrap:nowrap}
 .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
 .badge-pending{background:#f3f4f6;color:#374151}
 .badge-running{background:#dbeafe;color:#1d4ed8}
 .badge-success{background:#dcfce7;color:#16a34a}
 .badge-failed{background:#fee2e2;color:#b91c1c}
+.job-details{border-top:1px dashed rgba(27,44,72,0.12);padding-top:10px}
+.job-details-body{max-height:220px;overflow:auto}
+.job-logs{white-space:pre-wrap;font-size:12px;color:#374151}
+.mini-progress{width:200px;height:6px;background:#e5e7eb;border-radius:6px;overflow:hidden}
+.mini-progress-bar{height:100%;background:var(--primary, rgb(58, 126, 185));transition:width .2s linear}
+</style>
