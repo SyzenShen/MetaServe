@@ -716,7 +716,8 @@ def run_nd_task(mail_fp: str, out_dir: str, log_path: str, user_id=None, folder_
                 else:
                     lf.write(f"[ND] found MD5 file: {md5s}\n")
                     try:
-                        subprocess.run([lnd_bin, 'cp', f"oss://{dirpath}{md5s}", '.' ], cwd=work_dir, stdout=lf, stderr=lf, timeout=300)
+                        mpath = md5s[1:] if md5s.startswith('/') else md5s
+                        subprocess.run([lnd_bin, 'cp', f"oss://{dirpath}/{mpath}", '.' ], cwd=work_dir, stdout=lf, stderr=lf, timeout=300)
                     except subprocess.TimeoutExpired:
                         lf.write('[ND] WARN: md5 copy timeout, continue\n')
                 if not files:

@@ -16,6 +16,10 @@ PID_DIR="$REPO_ROOT/.pids"
 FRONTEND_DIR="$REPO_ROOT/frontend"
 BACKEND_DIR="$REPO_ROOT"
 NODE_BIN="$REPO_ROOT/.node/bin/node"
+if [[ ! -x "$NODE_BIN" ]]; then
+  # Fallback to system node
+  NODE_BIN="$(command -v node || true)"
+fi
 VITE_BIN="$REPO_ROOT/frontend/node_modules/vite/bin/vite.js"
 
 mkdir -p "$LOG_DIR" "$PID_DIR"
@@ -64,7 +68,8 @@ start_frontend() {
     exit 1
   fi
   if [[ ! -f "$VITE_BIN" ]]; then
-    echo "错误: Vite 未安装：$VITE_BIN 不存在。请在 frontend 目录安装依赖。"
+    echo "错误: Vite 未安装：$VITE_BIN 不存在。"
+    echo "请先执行: cd frontend && npm install"
     exit 1
   fi
   # 若 PID 文件存在且进程仍在运行，也跳过
