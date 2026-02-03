@@ -1,4 +1,4 @@
-![d13c03cadd2091a4fb9ed70ce1752f59](https://p.ipic.vip/brmf2k.jpg)
+![d13c03cadd2091a4fb9ed70ce1752f59](https://p.ipic.vip/vr500y.jpg)
 
 MetaServe项目面向科研机构或企业级生物信息中心，用于替代传统 FTP / NAS 文件系统，实现实验数据的可视化与追踪。且预留了基于机器机器学习的智能分析接口，可拓展科研数据的智能标注与可视化。目前已在首都医科大学部署。
 
