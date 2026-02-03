@@ -27,11 +27,21 @@ Compared with traditional script-based pipelines and shared drives, MetaServe si
 
 ## 新增功能 / What's New
 
-- 按文件ID下载，自动处理中文文件名。
-- 文件夹打包为 ZIP，按权限只打包你能看的内容。
-- 后台下载任务可启动、查看进度、取消。
-- 输入分享链接后，文件会保存到个人“Download”或指定文件夹。
-- 文件预览接口：文本、序列、PDF 的基本预览。
+- **Zero-copy Pipeline Access**: 新增 `/api/files/manifest/` 接口，支持分析流程通过文件路径清单直接读取数据（无需下载），配合 Linux 权限控制实现零拷贝接入。
+- **Cellxgene 深度优化**: 采用 Symlink 软链接发布 `.h5ad` 文件，避免数据冗余，秒级发布体验。
+- **工程化部署**: 提供完整的 Docker Compose 生产环境配置与 CI/CD 流水线。
+- **按文件ID下载**: 自动处理中文文件名。
+- **文件夹打包**: 按权限只打包你能看的内容。
+- **后台下载任务**: 可启动、查看进度、取消。
+- **NCBI 数据桥接**: 自动解析 NCBI 链接并下载元数据与文件。
+- **文件预览接口**: 文本、序列、PDF 的基本预览。
+
+## 文档资源 / Documentation
+
+为方便开发者与运维人员，我们提供了详细的工程文档：
+
+- [**权限体系架构 (Permissions Architecture)**](docs/PERMISSIONS.md): 详解混合权限模型 (RBAC + ACL)、Access Levels (Public/Internal/Restricted) 及冲突解决规则。
+- [**生产环境部署指南 (Deployment Guide)**](docs/DEPLOYMENT.md): 基于 Docker Compose + Nginx + Gunicorn 的完整部署手册。
 
 ## 架构简介 / Architecture Overview
 
@@ -98,7 +108,7 @@ npm run dev -- --host --port 5173 --strictPort
 
 1. 上传或选择 `.h5ad` 文件。  
 2. 点击“发送到 Cellxgene”。  
-3. 后端复制文件至 `cellxgene_data/<id>__filename.h5ad`，如缺失二维嵌入则利用 TruncatedSVD 自动生成；随后终止旧进程、清理占用端口并启动新实例。  
+3. 后端优先尝试创建 **Symlink 软链接** 将文件映射至 `cellxgene_data/`（实现 Zero-copy 发布）；若失败则回退到复制模式。如缺失二维嵌入则利用 TruncatedSVD 自动生成；随后终止旧进程、清理占用端口并启动新实例。  
 4. 前端显示遮罩并轮询 `/cellxgene/api/v0.2/config`；当返回数据集名称与目标一致时解除遮罩并跳转 `/cellxgene-app?file=<filename>`。  
 5. 导航栏记住最近发布的文件；若尚未发布，链接打开 Cellxgene 默认欢迎页。
 
