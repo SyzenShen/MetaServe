@@ -995,9 +995,21 @@ def publish_cellxgene(request, file_id):
         target_path = os.path.join(target_dir, target_filename)
 
         try:
-            shutil.copy2(file_obj.file.path, target_path)
+            # 优先尝试软链接以实现零拷贝 (Zero-copy)
+            if os.path.exists(target_path):
+                if os.path.islink(target_path) or os.path.isfile(target_path):
+                    os.remove(target_path)
+            
+            try:
+                os.symlink(file_obj.file.path, target_path)
+                logger.info(f"Symlinked {file_obj.file.path} to {target_path}")
+            except OSError:
+                # 软链接失败（如跨文件系统或权限问题）则回退到复制
+                logger.warning(f"Symlink failed, falling back to copy for {target_path}")
+                shutil.copy2(file_obj.file.path, target_path)
+                
         except Exception as e:
-            return Response({'message': f'复制文件失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'message': f'发布文件失败 (Link/Copy error): {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         prepare_info = prepare_h5ad_for_cellxgene(target_path)
         if prepare_info.get('status') == 'error':
@@ -1271,67 +1283,90 @@ def folder_all(request):
 @permission_classes([IsAuthenticated])
 def file_detail(request, file_id):
     """获取或更新文件的基础信息与访问控制
-
-    更新允许的字段：
-    - access_level: Public/Internal/Restricted
-    - parent_folder: 可移动到有权限访问的文件夹
-    - 组织关联：通过父文件夹的 organization 继承；不直接在 File 上设置组织
-      若移动到一个有关联组织的文件夹，则该文件视为组织内部文件（通常 access_level=Internal）
-    权限：仅文件拥有者可修改；管理员可读取但不修改。
+    
+    更新权限说明：
+    1. 拥有者(Owner)或超级用户：可更新所有元数据及访问控制字段（access_level, parent_folder）。
+    2. 具有 can_edit_metadata 权限的共享用户：仅可更新描述性元数据（title, description, tags, etc.），
+       不可更改访问级别或移动文件夹。
     """
     try:
         f = File.objects.get(id=file_id)
     except File.DoesNotExist:
         return Response({'error': '文件不存在'}, status=status.HTTP_404_NOT_FOUND)
 
-    # 仅拥有者允许更新
-    is_owner = getattr(f, 'user_id', None) == getattr(request.user, 'id', None)
+    # 权限检查：是否拥有者或具有编辑权限
+    from .permission_utils import can_edit_file_metadata
+    if request.method == 'PUT':
+        if not can_edit_file_metadata(request.user, f):
+            # 隐藏资源存在性
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
 
+    # GET 请求：只要能查看或下载即可（通常由 file_list 过滤，或者是 direct link）
+    # 但此处为了安全，建议也校验 view 权限
     if request.method == 'GET':
+        from .permission_utils import can_view_or_download_file
+        if not can_view_or_download_file(request.user, f):
+             return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
         ser = FileSerializer(f, context={'request': request})
         return Response(ser.data)
 
-    # PUT
-    if not is_owner and not getattr(request.user, 'is_superuser', False):
-        # 与删除策略保持一致：隐藏资源存在性
-        return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
-
+    # PUT 处理
     payload = request.data or {}
-    allowed_fields = {'access_level', 'parent_folder'}
+    
+    # 区分字段权限
+    is_owner_or_admin = (f.user_id == request.user.id) or getattr(request.user, 'is_superuser', False)
+    
+    # 敏感字段：仅 Owner/Superuser
+    sensitive_fields = {'access_level', 'parent_folder'}
+    # 普通元数据字段
+    metadata_fields = {'title', 'description', 'tags', 'organism', 'experiment_type', 'project', 'file_format', 'document_type'}
+    
+    allowed_fields = set()
+    if is_owner_or_admin:
+        allowed_fields.update(sensitive_fields)
+        allowed_fields.update(metadata_fields)
+    else:
+        allowed_fields.update(metadata_fields)
+        
     data = {k: v for k, v in payload.items() if k in allowed_fields}
 
-    # 校验 parent_folder 可见性
-    parent_folder_id = data.get('parent_folder')
+    # 1. 处理 parent_folder (敏感字段)
     parent_folder = None
-    if parent_folder_id:
-        try:
-            parent_folder = Folder.objects.get(id=parent_folder_id)
-        except Folder.DoesNotExist:
-            return Response({'error': '目标文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
-        from .permission_utils import can_view_folder
-        if not can_view_folder(request.user, parent_folder):
-            return Response({'error': '无权限移动到此文件夹'}, status=status.HTTP_403_FORBIDDEN)
+    if 'parent_folder' in data:
+        parent_folder_id = data.get('parent_folder')
+        if parent_folder_id:
+            try:
+                parent_folder = Folder.objects.get(id=parent_folder_id)
+            except Folder.DoesNotExist:
+                return Response({'error': '目标文件夹不存在'}, status=status.HTTP_404_NOT_FOUND)
+            from .permission_utils import can_view_folder
+            if not can_view_folder(request.user, parent_folder):
+                return Response({'error': '无权限移动到此文件夹'}, status=status.HTTP_403_FORBIDDEN)
+            f.parent_folder = parent_folder
+        else:
+            # 允许设为 None (根目录)
+            f.parent_folder = None
 
-    # 访问级别规范化
-    access_level = data.get('access_level')
-    if access_level:
-        access_level = str(access_level).strip()
+    # 2. 处理 access_level (敏感字段)
+    if 'access_level' in data:
+        access_level = str(data['access_level']).strip()
         if access_level not in ('Public', 'Internal', 'Restricted'):
             return Response({'error': '无效的访问级别'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # 应用更新
-    if parent_folder is not None:
-        f.parent_folder = parent_folder
-        # 若目标文件夹属于某组织，建议同步为 Internal（如未显式指定）
-        try:
-            if getattr(parent_folder, 'organization', None) and not access_level:
-                access_level = 'Internal'
-        except Exception:
-            pass
-
-    if access_level:
         f.access_level = access_level
+        
+        # 若移动到组织文件夹且未指定 access_level，特殊处理逻辑
+        if parent_folder:
+             try:
+                if getattr(parent_folder, 'organization', None) and not data.get('access_level'):
+                    f.access_level = 'Internal'
+             except Exception:
+                pass
 
-    f.save(update_fields=['parent_folder', 'access_level'])
+    # 3. 处理普通元数据
+    for k in metadata_fields:
+        if k in data:
+            setattr(f, k, data[k])
+
+    f.save()
     ser = FileSerializer(f, context={'request': request})
     return Response(ser.data)

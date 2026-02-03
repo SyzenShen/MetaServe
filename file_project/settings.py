@@ -82,6 +82,11 @@ WSGI_APPLICATION = 'file_project.wsgi.application'
 # Custom User Model
 AUTH_USER_MODEL = 'authentication.CustomUser'
 
+# File Upload Permissions
+# Ensure uploaded files are readable by others (e.g. analysis pipelines)
+# 0o644: Owner(RW), Group(R), Others(R)
+FILE_UPLOAD_PERMISSIONS = 0o644
+
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 

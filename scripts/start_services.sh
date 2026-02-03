@@ -25,7 +25,7 @@ VITE_BIN="$REPO_ROOT/frontend/node_modules/vite/bin/vite.js"
 mkdir -p "$LOG_DIR" "$PID_DIR"
 
 # 将用户本地可执行目录加入 PATH，便于解析 ~/.local/bin/cellxgene
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/Library/Python/3.10/bin:$HOME/.local/bin:$PATH"
 export LND_PATH="${LND_PATH:-/home/mosserver/software/linuxnd}"
 
 # 解析并导出 Cellxgene 路径与用于布局生成的 Python 解释器
@@ -33,6 +33,9 @@ export LND_PATH="${LND_PATH:-/home/mosserver/software/linuxnd}"
 CELLXGENE_CMD="${CELLXGENE_CMD:-$(command -v cellxgene || true)}"
 CELLXGENE_PYTHON="${CELLXGENE_PYTHON:-$(command -v python3 || command -v python || true)}"
 export CELLXGENE_CMD CELLXGENE_PYTHON
+CELLXGENE_PORT="${CELLXGENE_PORT:-5005}"
+# 若未设置，令前端默认指向代理路径 /cellxgene/，以便利用 Vite 代理转发到 CELLXGENE_PORT
+export VITE_CELLXGENE_URL="${VITE_CELLXGENE_URL:-/cellxgene/}"
 
 echo "CELLXGENE_CMD=${CELLXGENE_CMD:-<not found>}"
 echo "CELLXGENE_PYTHON=${CELLXGENE_PYTHON:-<not found>}"
@@ -90,6 +93,36 @@ start_frontend() {
   wait_for_port "前端" "$FRONTEND_PORT" 20
 }
 
+start_cellxgene() {
+  # 仅在命令存在时尝试启动
+  if [[ -z "${CELLXGENE_CMD}" ]]; then
+    return 0
+  fi
+  # 若未指定数据集，尝试查找 cellxgene_data 下的第一个 h5ad 文件
+  if [[ -z "${CELLXGENE_DATASET:-}" ]]; then
+    local default_h5ad
+    default_h5ad="$(find "$REPO_ROOT/cellxgene_data" -name "*.h5ad" -print -quit 2>/dev/null || true)"
+    if [[ -n "$default_h5ad" ]]; then
+      echo "发现默认数据集: $default_h5ad"
+      CELLXGENE_DATASET="$default_h5ad"
+    else
+      echo "提示: 未设置 CELLXGENE_DATASET 且未在 cellxgene_data 下找到 h5ad 文件，跳过 Cellxgene 启动。"
+      return 0
+    fi
+  fi
+  if is_port_up "$CELLXGENE_PORT"; then
+    echo "Cellxgene 端口 ${CELLXGENE_PORT} 已有服务，就绪，跳过启动。"
+    return 0
+  fi
+  (
+    cd "$REPO_ROOT"
+    nohup "$CELLXGENE_CMD" launch "${CELLXGENE_DATASET}" --port "${CELLXGENE_PORT}" --host 0.0.0.0 \
+      > "$LOG_DIR/cellxgene.log" 2>&1 &
+    echo $! > "$PID_DIR/cellxgene.pid"
+  )
+  wait_for_port "Cellxgene" "$CELLXGENE_PORT" 25 || true
+}
+
 start_backend() {
   echo "启动后端服务 (Django) ..."
   # 若端口已被占用，认为已有服务在运行，直接跳过启动
@@ -115,6 +148,7 @@ start_backend() {
 }
 
 start_frontend
+start_cellxgene
 start_backend
 
 echo "已尝试启动：前端 http://localhost:${FRONTEND_PORT}/，后端 http://localhost:${BACKEND_PORT}/"

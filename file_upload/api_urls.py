@@ -22,6 +22,7 @@ urlpatterns = [
     
     # 文件搜索相关API
     path('search/', search_views.search_files, name='file-search'),
+    path('manifest/', search_views.export_manifest, name='export-manifest'),
     path('facets/', search_views.get_facets, name='file-facets'),
     path('suggestions/', search_views.search_suggestions, name='search-suggestions'),
     path('<int:file_id>/preview/', search_views.file_preview, name='file-preview'),

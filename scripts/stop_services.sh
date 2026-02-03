@@ -9,6 +9,8 @@ PID_DIR="$REPO_ROOT/.pids"
 FRONTEND_PORT="${FRONTEND_PORT:-5173}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 
+CELLXGENE_PORT="${CELLXGENE_PORT:-5005}"
+
 kill_by_port() {
   local name="$1"; local port="$2"
   echo "${name}: 检查端口 ${port} 的遗留进程..."
@@ -82,9 +84,11 @@ stop_one() {
 
 stop_one "前端" "$PID_DIR/frontend.pid"
 stop_one "后端" "$PID_DIR/backend.pid"
+stop_one "Cellxgene" "$PID_DIR/cellxgene.pid"
 
 kill_by_port "前端" "$FRONTEND_PORT"
 kill_by_port "后端" "$BACKEND_PORT"
+kill_by_port "Cellxgene" "$CELLXGENE_PORT"
 
 # 额外清理常见测试/预览端口
 for extra_port in 5174 5175 5176 8001 8007 8008 8010; do

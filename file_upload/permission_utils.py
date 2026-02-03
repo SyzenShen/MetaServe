@@ -48,6 +48,39 @@ def has_file_share_access(user: User, file: File) -> bool:
     return False
 
 
+def can_edit_file_metadata(user: User, file: File) -> bool:
+    """检查用户是否具有编辑文件元数据的权限（Owner/Superuser/Shared with Edit）"""
+    if getattr(user, 'is_superuser', False):
+        return True
+    if file.user_id == user.id:
+        return True
+    
+    # 检查共享权限
+    qs = FileShare.objects.filter(file=file)
+    if not qs.exists():
+        return False
+        
+    active_shares = [s for s in qs if s.is_active()]
+    if not active_shares:
+        return False
+
+    # 直接共享给用户
+    if any(s.shared_to_user_id == user.id and s.can_edit_metadata for s in active_shares):
+        return True
+
+    # 共享给组织
+    try:
+        from authentication.models import Membership
+        user_org_ids = set(Membership.objects.filter(user=user).values_list('organization_id', flat=True))
+        for s in active_shares:
+            if s.shared_to_organization_id and s.can_edit_metadata and s.shared_to_organization_id in user_org_ids:
+                return True
+    except Exception:
+        pass
+        
+    return False
+
+
 def can_view_or_download_file(user: User, file: File) -> bool:
     """统一的文件访问判定"""
     if user.is_superuser:

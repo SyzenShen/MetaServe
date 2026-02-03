@@ -4,7 +4,7 @@
 """
 
 from django.db.models import Q, Count
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -12,10 +12,39 @@ from rest_framework.response import Response
 from django.core.paginator import Paginator
 from django.db.models import Case, When, Value, CharField
 import re
+import os
+import logging
 from typing import Dict, List, Any
 
 from .models import File
 from .serializers import FileSerializer
+
+logger = logging.getLogger(__name__)
+
+
+def apply_filters(queryset, params: Dict[str, str]):
+    """应用通用筛选条件"""
+    document_type = params.get('document_type', '')
+    file_format = params.get('file_format', '')
+    organism = params.get('organism', '')
+    project = params.get('project', '')
+    experiment_type = params.get('experiment_type', '')
+    access_level = params.get('access_level', '')
+    
+    if document_type:
+        queryset = queryset.filter(document_type=document_type)
+    if file_format:
+        queryset = queryset.filter(file_format=file_format)
+    if organism:
+        queryset = queryset.filter(organism__icontains=organism)
+    if project:
+        queryset = queryset.filter(project__icontains=project)
+    if experiment_type:
+        queryset = queryset.filter(experiment_type=experiment_type)
+    if access_level:
+        queryset = queryset.filter(access_level=access_level)
+        
+    return queryset
 
 
 @api_view(['GET'])
@@ -31,18 +60,6 @@ def search_files(request):
         page = int(request.GET.get('page', 1))
         page_size = int(request.GET.get('page_size', 20))
         
-        # 获取筛选参数 (Facets)
-        document_type = request.GET.get('document_type', '')
-        file_format = request.GET.get('file_format', '')
-        organism = request.GET.get('organism', '')
-        project = request.GET.get('project', '')
-        experiment_type = request.GET.get('experiment_type', '')
-        access_level = request.GET.get('access_level', '')
-        
-        # 排序参数
-        sort_by = request.GET.get('sort_by', 'uploaded_at')
-        sort_order = request.GET.get('sort_order', 'desc')
-        
         # 基础查询：只返回当前用户的文件
         queryset = File.objects.filter(user=request.user)
         
@@ -51,18 +68,11 @@ def search_files(request):
             queryset = apply_search_query(queryset, query)
         
         # 应用筛选条件
-        if document_type:
-            queryset = queryset.filter(document_type=document_type)
-        if file_format:
-            queryset = queryset.filter(file_format=file_format)
-        if organism:
-            queryset = queryset.filter(organism__icontains=organism)
-        if project:
-            queryset = queryset.filter(project__icontains=project)
-        if experiment_type:
-            queryset = queryset.filter(experiment_type=experiment_type)
-        if access_level:
-            queryset = queryset.filter(access_level=access_level)
+        queryset = apply_filters(queryset, request.GET)
+        
+        # 排序参数
+        sort_by = request.GET.get('sort_by', 'uploaded_at')
+        sort_order = request.GET.get('sort_order', 'desc')
         
         # 应用排序
         order_field = sort_by
@@ -94,12 +104,12 @@ def search_files(request):
             'query_info': {
                 'query': query,
                 'filters_applied': {
-                    'document_type': document_type,
-                    'file_format': file_format,
-                    'organism': organism,
-                    'project': project,
-                    'experiment_type': experiment_type,
-                    'access_level': access_level,
+                    'document_type': request.GET.get('document_type', ''),
+                    'file_format': request.GET.get('file_format', ''),
+                    'organism': request.GET.get('organism', ''),
+                    'project': request.GET.get('project', ''),
+                    'experiment_type': request.GET.get('experiment_type', ''),
+                    'access_level': request.GET.get('access_level', ''),
                 }
             }
         })
@@ -107,6 +117,48 @@ def search_files(request):
     except Exception as e:
         return Response(
             {'error': f'搜索失败: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_manifest(request):
+    """
+    导出文件路径清单，用于分析流程（Zero-copy access）
+    支持与 search_files 相同的筛选参数
+    返回格式：text/plain，每行一个绝对路径
+    """
+    try:
+        # 获取搜索参数
+        query = request.GET.get('q', '').strip()
+        
+        # 基础查询：只返回当前用户的文件
+        queryset = File.objects.filter(user=request.user)
+        
+        # 应用搜索条件
+        if query:
+            queryset = apply_search_query(queryset, query)
+        
+        # 应用筛选条件
+        queryset = apply_filters(queryset, request.GET)
+        
+        # 生成清单 (只包含存在的文件)
+        paths = []
+        for f in queryset:
+            try:
+                if f.file and os.path.exists(f.file.path):
+                    paths.append(f.file.path)
+            except Exception:
+                pass
+        
+        logger.info(f"User {request.user.username} exported manifest with {len(paths)} files. Query: {query}")
+        
+        return HttpResponse('\n'.join(paths), content_type='text/plain')
+        
+    except Exception as e:
+        return Response(
+            {'error': f'导出清单失败: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
