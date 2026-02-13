@@ -455,6 +455,10 @@ def file_share_create(request):
         if not dt:
             return Response({'detail': 'invalid expires_at'}, status=status.HTTP_400_BAD_REQUEST)
         share_kwargs['expires_at'] = dt
+    else:
+        # 默认有效期 3 个月 (90天)
+        from django.utils import timezone
+        share_kwargs['expires_at'] = timezone.now() + timezone.timedelta(days=90)
 
     if user_id:
         share_kwargs['shared_to_user_id'] = int(user_id)

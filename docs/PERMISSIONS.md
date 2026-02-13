@@ -23,7 +23,7 @@ MetaServe employs a **Hybrid Authorization Model** combining:
 
 ### 4.1 Models
 - **File**: Stores `access_level` (Public/Internal/Restricted).
-- **FileShare**: Stores explicit grants (`can_download`, `can_edit_metadata`) to User or Organization.
+- **FileShare**: Stores explicit grants (`can_download`, `can_edit_metadata`) to User or Organization. Includes `expires_at` for temporary access (Default: 90 days).
 - **Membership**: Links User to Organization with a Role.
 
 ### 4.2 Utility Functions (`permission_utils.py`)

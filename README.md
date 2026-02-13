@@ -2,7 +2,7 @@
 
 MetaServe项目面向科研机构或企业级生物信息中心，用于替代传统 FTP / NAS 文件系统，实现实验数据的可视化与追踪。且预留了基于机器机器学习的智能分析接口，可拓展科研数据的智能标注与可视化。目前已在首都医科大学部署。
 
-MetaServe is aimed at research institutions or enterprise-level bioinformatics centers, and is designed to replace traditional FTP/NAS file systems to achieve the visualization and tracking of experimental data.A machine learning–based intelligent analytics interface is reserved for extensible data annotation and visualization in scientific research.currently deployed at Capital Medical University.
+MetaServe is aimed at research institutions or enterprise-level bioinformatics centers, and is designed to replace traditional FTP/NAS file systems to achieve the visualization and tracking of experimental data. A machine learning–based intelligent analytics interface is reserved for extensible data annotation and visualization in scientific research. Currently deployed at Capital Medical University.
 
 # MetaServe
 
@@ -17,31 +17,42 @@ Compared with traditional script-based pipelines and shared drives, MetaServe si
 
 | 能力 Capability | 说明 Description |
 | --- | --- |
-| 元数据索引 Metadata indexing | 22 个生物及技术字段（物种、实验类型、数据类型、标签等），并自动解析常见格式获得序列数、GC 含量、BAM 头信息等。 |
-| Facets 多维检索 | 支持物种 × 实验 × 标签 × 权限等组合筛选，毫秒级响应。 |
-| 访问控制与审计 | 公共 / 内部 / 私有三级策略，继承到用户、组、项目或目录级，所有操作写入审计日志。 |
-| 高可靠传输 | 分片上传、断点续传下载、暂停/恢复、失败自动重试、取消后清理残片。 |
-| Cellxgene 集成 | 一键发布 `.h5ad`，自动生成缺失嵌入、重启后台服务、前端遮罩提示、内嵌可视化。 |
-| 双接口 | Vue 3 单页界面 + RESTful API，便于人工操作与脚本化集成。 |
-| NCBI 数据桥接 | 输入 NCBI 链接一键识别（基因、蛋白、SRA、PubMed 等）并下载原始数据，自动写入元数据与标签。 |
+| 元数据索引 Metadata Indexing | 22 个生物及技术字段（物种、实验类型、数据类型、标签等），并自动解析常见格式获得序列数、GC 含量、BAM 头信息等。<br>Indexes 22 biological and technical fields (species, experiment type, data type, tags, etc.) and automatically parses common formats to extract sequence counts, GC content, BAM header info, etc. |
+| Facets 多维检索 Faceted Search | 支持物种 × 实验 × 标签 × 权限等组合筛选，毫秒级响应。<br>Supports combined filtering by Species × Experiment × Tags × Permissions with millisecond-level response. |
+| 访问控制与审计 Access Control & Audit | 公共 / 内部 / 私有三级策略，继承到用户、组、项目或目录级，所有操作写入审计日志。<br>Three-level policy (Public/Internal/Private), inherited by user, group, project, or directory; all operations are recorded in audit logs. |
+| 高可靠传输 Reliable Transfer | 分片上传、断点续传下载、暂停/恢复、失败自动重试、取消后清理残片。<br>Chunked upload, resumable download, pause/resume, automatic retry on failure, and fragment cleanup after cancellation. |
+| Cellxgene 集成 Cellxgene Integration | 一键发布 `.h5ad`，自动生成缺失嵌入、重启后台服务、前端遮罩提示、内嵌可视化。<br>One-click publishing of `.h5ad`, automatic generation of missing embeddings, background service restart, frontend overlay prompts, and embedded visualization. |
+| 双接口 Dual Interface | Vue 3 单页界面 + RESTful API，便于人工操作与脚本化集成。<br>Vue 3 SPA + RESTful API, facilitating manual operation and script integration. |
+| NCBI 数据桥接 NCBI Data Bridge | 输入 NCBI 链接一键识别（基因、蛋白、SRA、PubMed 等）并下载原始数据，自动写入元数据与标签。<br>One-click identification of NCBI links (Gene, Protein, SRA, PubMed, etc.) to download raw data, automatically writing metadata and tags. |
 
 ## 新增功能 / What's New
 
 - **Zero-copy Pipeline Access**: 新增 `/api/files/manifest/` 接口，支持分析流程通过文件路径清单直接读取数据（无需下载），配合 Linux 权限控制实现零拷贝接入。
-- **Cellxgene 深度优化**: 采用 Symlink 软链接发布 `.h5ad` 文件，避免数据冗余，秒级发布体验。
-- **工程化部署**: 提供完整的 Docker Compose 生产环境配置与 CI/CD 流水线。
-- **按文件ID下载**: 自动处理中文文件名。
-- **文件夹打包**: 按权限只打包你能看的内容。
-- **后台下载任务**: 可启动、查看进度、取消。
-- **NCBI 数据桥接**: 自动解析 NCBI 链接并下载元数据与文件。
-- **文件预览接口**: 文本、序列、PDF 的基本预览。
+  <br>Added `/api/files/manifest/` endpoint, supporting analysis pipelines reading data directly via file path lists (no download required), combined with Linux permissions for zero-copy access.
+- **Cellxgene 深度优化 (Cellxgene Optimization)**: 采用 Symlink 软链接发布 `.h5ad` 文件，避免数据冗余，秒级发布体验。
+  <br>Uses Symlink for publishing `.h5ad` files to avoid data redundancy, providing a second-level publishing experience.
+- **工程化部署 (Engineering Deployment)**: 提供完整的 Docker Compose 生产环境配置与 CI/CD 流水线。
+  <br>Provides complete Docker Compose production environment configuration and CI/CD pipelines.
+- **按文件ID下载 (Download by File ID)**: 自动处理中文文件名。
+  <br>Automatically handles Chinese filenames.
+- **文件夹打包 (Folder Packaging)**: 按权限只打包你能看的内容。
+  <br>Packages only content you have permission to view.
+- **后台下载任务 (Background Download Tasks)**: 可启动、查看进度、取消。
+  <br>Start, view progress, and cancel background tasks.
+- **NCBI 数据桥接 (NCBI Data Bridge)**: 自动解析 NCBI 链接并下载元数据与文件。
+  <br>Automatically parses NCBI links and downloads metadata and files.
+- **文件预览接口 (File Preview Interface)**: 文本、序列、PDF 的基本预览。
+  <br>Basic preview for text, sequences, and PDF.
 
 ## 文档资源 / Documentation
 
 为方便开发者与运维人员，我们提供了详细的工程文档：
+<br>For developers and operations personnel, we provide detailed engineering documentation:
 
 - [**权限体系架构 (Permissions Architecture)**](docs/PERMISSIONS.md): 详解混合权限模型 (RBAC + ACL)、Access Levels (Public/Internal/Restricted) 及冲突解决规则。
+  <br>Detailed Hybrid Permission Model (RBAC + ACL), Access Levels (Public/Internal/Restricted), and conflict resolution rules.
 - [**生产环境部署指南 (Deployment Guide)**](docs/DEPLOYMENT.md): 基于 Docker Compose + Nginx + Gunicorn 的完整部署手册。
+  <br>Complete deployment manual based on Docker Compose + Nginx + Gunicorn.
 
 ## 架构简介 / Architecture Overview
 
@@ -52,6 +63,7 @@ Vue 3 SPA  ⇄  Django REST  ⇄  Metadata DB & File Store  ⇄  Cellxgene Viewe
 ```
 
 前端采用 Vite 构建，后端基于 Django + DRF；Cellxgene 由后端调度，独立运行在可配置端口上。
+<br>The frontend is built with Vite, and the backend is based on Django + DRF; Cellxgene is scheduled by the backend and runs independently on a configurable port.
 
 ---
 
@@ -65,6 +77,7 @@ Vue 3 SPA  ⇄  Django REST  ⇄  Metadata DB & File Store  ⇄  Cellxgene Viewe
 | 操作系统 OS | macOS / Linux（需要 `bash`, `curl`, `lsof`） |
 
 Cellxgene 运行在单独的虚拟环境 `.venv-cellxgene` 中，避免与主环境依赖冲突。
+<br>Cellxgene runs in a separate virtual environment `.venv-cellxgene` to avoid dependency conflicts with the main environment.
 
 ---
 
@@ -78,7 +91,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install django djangorestframework django-cors-headers
 python manage.py migrate
-# python manage.py createsuperuser  # 可选
+# python manage.py createsuperuser  # 可选 Optional
 
 cd frontend
 npm install
@@ -99,123 +112,148 @@ npm run dev -- --host --port 5173 --strictPort
 ```
 
 浏览器访问 http://localhost:5173。亦可使用 `scripts/start_services.sh` / `scripts/stop_services.sh` 统一管理进程。
+<br>Visit http://localhost:5173 in your browser. You can also use `scripts/start_services.sh` / `scripts/stop_services.sh` to manage processes uniformly.
 
 > 开发环境后端端口为 `8020`（与 Vite 代理一致），生产或单机默认使用 `8000`。前端与测试页建议使用相对路径 `/api/...`，避免端口漂移；如果在纯 HTML 测试页中需要显式地址，请将 `API_BASE` 设置为 `http://localhost:8020`。
+> <br>The backend port in the development environment is `8020` (consistent with the Vite proxy), while production or standalone defaults to `8000`. It is recommended to use relative paths `/api/...` for frontend and test pages to avoid port drift; if an explicit address is required in a pure HTML test page, please set `API_BASE` to `http://localhost:8020`.
 
 ---
 
 ## Cellxgene 工作流 / Cellxgene Workflow
 
-1. 上传或选择 `.h5ad` 文件。  
-2. 点击“发送到 Cellxgene”。  
-3. 后端优先尝试创建 **Symlink 软链接** 将文件映射至 `cellxgene_data/`（实现 Zero-copy 发布）；若失败则回退到复制模式。如缺失二维嵌入则利用 TruncatedSVD 自动生成；随后终止旧进程、清理占用端口并启动新实例。  
-4. 前端显示遮罩并轮询 `/cellxgene/api/v0.2/config`；当返回数据集名称与目标一致时解除遮罩并跳转 `/cellxgene-app?file=<filename>`。  
+1. 上传或选择 `.h5ad` 文件。
+   <br>Upload or select an `.h5ad` file.
+2. 点击“发送到 Cellxgene”。
+   <br>Click "Send to Cellxgene".
+3. 后端优先尝试创建 **Symlink 软链接** 将文件映射至 `cellxgene_data/`（实现 Zero-copy 发布）；若失败则回退到复制模式。如缺失二维嵌入则利用 TruncatedSVD 自动生成；随后终止旧进程、清理占用端口并启动新实例。
+   <br>The backend prioritizes creating a **Symlink** to map the file to `cellxgene_data/` (achieving Zero-copy publishing); if it fails, it falls back to copy mode. If 2D embedding is missing, TruncatedSVD is used to generate it automatically; then the old process is terminated, the occupied port is cleaned up, and a new instance is started.
+4. 前端显示遮罩并轮询 `/cellxgene/api/v0.2/config`；当返回数据集名称与目标一致时解除遮罩并跳转 `/cellxgene-app?file=<filename>`。
+   <br>The frontend shows an overlay and polls `/cellxgene/api/v0.2/config`; when the returned dataset name matches the target, the overlay is removed and the page redirects to `/cellxgene-app?file=<filename>`.
 5. 导航栏记住最近发布的文件；若尚未发布，链接打开 Cellxgene 默认欢迎页。
+   <br>The navbar remembers the most recently published file; if not yet published, the link opens the Cellxgene default welcome page.
 
 配置项（可在 `file_project/settings.py` 或环境变量中覆盖）：
+<br>Configuration items (can be overridden in `file_project/settings.py` or environment variables):
 
 | Setting | Default | 描述 Description |
 | --- | --- | --- |
-| `CELLXGENE_DATA_DIR` | `<BASE_DIR>/cellxgene_data` | Cellxgene 数据目录 |
-| `CELLXGENE_PORT` | `5005` | 默认端口，可按需调整 |
-| `CELLXGENE_CMD` | `.venv-cellxgene/bin/cellxgene` | 启动命令路径 |
-| `CELLXGENE_LOG_FILE` | `logs/cellxgene.log` | 日志位置 |
-| `CELLXGENE_AUTO_RESTART` | `True` | 发布时是否自动重启 |
+| `CELLXGENE_DATA_DIR` | `<BASE_DIR>/cellxgene_data` | Cellxgene 数据目录 Data directory |
+| `CELLXGENE_PORT` | `5005` | 默认端口，可按需调整 Default port |
+| `CELLXGENE_CMD` | `.venv-cellxgene/bin/cellxgene` | 启动命令路径 Start command path |
+| `CELLXGENE_LOG_FILE` | `logs/cellxgene.log` | 日志位置 Log location |
+| `CELLXGENE_AUTO_RESTART` | `True` | 发布时是否自动重启 Auto restart on publish |
 
 ## NCBI 数据接口 / NCBI Data Bridge
 
 * 前端文件工作台新增 “NCBI 下载” 入口，支持在当前目录内一键导入 NCBI 资源。
+  <br>Added "NCBI Download" entry in the frontend file workbench, supporting one-click import of NCBI resources into the current directory.
 * 系统自动解析链接并匹配常见库：
+  <br>The system automatically parses links and matches common libraries:
   - Nuccore / Nucleotide → FASTA
   - Protein → FASTA
-  - Gene / BioProject / BioSample → XML 摘要
-  - SRA → 压缩 FASTQ（受下载大小限制，默认 ≤ 1 GiB）
-  - PubMed → 摘要文本
+  - Gene / BioProject / BioSample → XML 摘要 (XML Summary)
+  - SRA → 压缩 FASTQ（受下载大小限制，默认 ≤ 1 GiB） (Compressed FASTQ, limited by download size, default ≤ 1 GiB)
+  - PubMed → 摘要文本 (Abstract text)
 * 后端通过 E-utilities (`efetch`, `esummary`) 获取原始文件及元信息，保存为 `upload_method="NCBI Import"` 的文件记录，自动补充物种、长度、下载字节数等 metadata。
-* 相关接口：
+  <br>The backend uses E-utilities (`efetch`, `esummary`) to fetch raw files and metadata, saving them as file records with `upload_method="NCBI Import"`, and automatically populating metadata such as species, length, and downloaded bytes.
+* 相关接口 / Related APIs:
 
-  | 方法 | 路径 | 说明 |
+  | 方法 Method | 路径 Path | 说明 Description |
   | --- | --- | --- |
-  | `POST` | `/api/files/ncbi/import/` | 请求体 `{ "url": "<NCBI link>", "parent_folder": optional }`，返回下载后的文件信息与摘要。 |
+  | `POST` | `/api/files/ncbi/import/` | 请求体 `{ "url": "<NCBI link>", "parent_folder": optional }`，返回下载后的文件信息与摘要。<br>Request body `{ "url": "<NCBI link>", "parent_folder": optional }`, returns downloaded file info and summary. |
 
-* 环境变量：
+* 环境变量 / Environment Variables:
   - `NCBI_MAX_DOWNLOAD_BYTES`（默认 `1073741824`，即 1 GiB）控制单个下载上限。
+    <br>Controls the single download limit (default `1073741824`, i.e., 1 GiB).
   - `NCBI_HTTP_TIMEOUT`（默认 120 秒）控制 E-utilities 访问超时。
+    <br>Controls E-utilities access timeout (default 120 seconds).
 
 > 注意：SRA FASTQ 体积较大，超过阈值将返回 `413`，可通过配置项或更换更小的样本号来测试。
+> <br>Note: SRA FASTQ files are large; exceeding the threshold will return `413`. This can be tested by adjusting the configuration or using a smaller sample ID.
 
 ---
 
 ## 前端提示 / Frontend Notes
 
-* 分片上传与下载均支持暂停、恢复、取消，并记录进度。  
-* Facets 检索实时刷新，可保存常用筛选组合。  
-* 通知、遮罩统一由 Pinia Store 管理，交互反馈一致。  
+* 分片上传与下载均支持暂停、恢复、取消，并记录进度。
+  <br>Chunked upload and download both support pause, resume, cancel, and progress tracking.
+* Facets 检索实时刷新，可保存常用筛选组合。
+  <br>Faceted search refreshes in real-time, and common filter combinations can be saved.
+* 通知、遮罩统一由 Pinia Store 管理，交互反馈一致。
+  <br>Notifications and overlays are unified and managed by Pinia Store, ensuring consistent interaction feedback.
 * REST API 完全覆盖界面功能，便于脚本调用。
+  <br>REST API fully covers interface functions, facilitating script calls.
 
 ---
 
 ## 权限与共享 / Permissions & Sharing
 
-![3144351fcf75ca456d12497252e1e8aa](https://p.ipic.vip/hvptdb.png)
+![ead4ebdbb90dea9097abbef1ab1999dd](https://p.ipic.vip/3o2p4i.png)
 
 后端已实现分层权限与文件共享管理，核心点如下：
+<br>The backend has implemented tiered permissions and file sharing management. Key points are as follows:
 
-- 访问策略：`Public` / `Internal` / `Restricted` 协同组织与共享记录。
-- 统一校验：下载接口使用对象级权限判断；不可访问将返回 404。
-- 共享能力：支持共享到指定用户或组织，支持到期与下载权限控制。
+- **访问策略 (Access Policy)**: `Public` / `Internal` / `Restricted` 协同组织与共享记录。
+  <br>`Public` / `Internal` / `Restricted` coordinate with organizations and sharing records.
+- **统一校验 (Unified Validation)**: 下载接口使用对象级权限判断；不可访问将返回 404。
+  <br>Download interfaces use object-level permission checks; inaccessible files return 404.
+- **共享能力 (Sharing Capabilities)**: 支持共享到指定用户或组织，支持到期与下载权限控制。
+  <br>Supports sharing to specific users or organizations, with expiration and download permission controls.
 
-API 概览：
-- 认证与组织管理（前缀 `\`/api/auth\`）：
-  - `POST /api/auth/login/` 登录，返回 `token`
-  - `GET /api/auth/orgs/` 列出我的组织
-  - `POST /api/auth/orgs/create/` 新建组织
-  - `GET /api/auth/orgs/<org_id>/members/` 成员列表
-  - `POST /api/auth/orgs/<org_id>/members/add/` 添加成员
-  - `PUT /api/auth/orgs/<org_id>/members/<member_id>/update/` 更新角色
-  - `DELETE /api/auth/orgs/<org_id>/members/<member_id>/remove/` 移除成员
-- 文件共享（前缀 `\`/api/files\`）：
-  - `POST /api/files/shares/create/` 创建共享到用户或组织（仅文件拥有者）
-  - `GET /api/files/shares/` 列出我拥有文件的共享记录
-  - `DELETE /api/files/shares/<share_id>/delete/` 删除共享（仅文件拥有者）
-  - `GET /api/files/shared-to-me/` 列出共享给我的文件
-  - `GET /api/files/org-internal/` 列出同组织内的 Internal 文件
-  - `GET /api/files/<file_id>/download/` 下载（内含权限校验）
+API 概览 / API Overview:
+- 认证与组织管理 (Auth & Org Management)（前缀 `\`/api/auth\`）：
+  - `POST /api/auth/login/` 登录，返回 `token` (Login, returns token)
+  - `GET /api/auth/orgs/` 列出我的组织 (List my organizations)
+  - `POST /api/auth/orgs/create/` 新建组织 (Create new organization)
+  - `GET /api/auth/orgs/<org_id>/members/` 成员列表 (List members)
+  - `POST /api/auth/orgs/<org_id>/members/add/` 添加成员 (Add member)
+  - `PUT /api/auth/orgs/<org_id>/members/<member_id>/update/` 更新角色 (Update role)
+  - `DELETE /api/auth/orgs/<org_id>/members/<member_id>/remove/` 移除成员 (Remove member)
+- 文件共享 (File Sharing)（前缀 `\`/api/files\`）：
+  - `POST /api/files/shares/create/` 创建共享到用户或组织（仅文件拥有者） (Create share to user/org, owner only)
+  - `GET /api/files/shares/` 列出我拥有文件的共享记录 (List shares of my files)
+  - `DELETE /api/files/shares/<share_id>/delete/` 删除共享（仅文件拥有者） (Delete share, owner only)
+  - `GET /api/files/shared-to-me/` 列出共享给我的文件 (List files shared to me)
+  - `GET /api/files/org-internal/` 列出同组织内的 Internal 文件 (List Internal files in same org)
+  - `GET /api/files/<file_id>/download/` 下载（内含权限校验） (Download with permission check)
 
-示例：
+示例 / Example:
 ```bash
-# 登录
+# 登录 Login
 curl -sX POST http://localhost:8000/api/auth/login/ \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.com","password":"password"}'
 
-# 创建共享到某用户
+# 创建共享到某用户 Create share to a user
 curl -sX POST http://localhost:8000/api/files/shares/create/ \
   -H "Authorization: Token <TOKEN>" -H 'Content-Type: application/json' \
   -d '{"file_id":123, "user_id":45, "can_download":true}'
 
-# 列出共享记录
+# 列出共享记录 List shares
 curl -s -H "Authorization: Token <TOKEN>" http://localhost:8000/api/files/shares/
 
-# 下载（权限不满足时返回 404）
+# 下载（权限不满足时返回 404） Download (returns 404 if permission denied)
 curl -I -H "Authorization: Token <TOKEN>" http://localhost:8000/api/files/123/download/
 ```
 
-注意事项：
+注意事项 / Notes:
 - 若看到默认主键类型警告，请在 `file_project/settings.py` 中设置 `DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'`（项目已配置）。
+  <br>If you see a default primary key warning, set `DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'` in `file_project/settings.py` (project already configured).
 - 若 `STATICFILES_DIRS` 指向的目录不存在，项目已自动忽略该路径；如需静态资源请创建 `static/` 目录或调整设置。
+  <br>If the directory pointed to by `STATICFILES_DIRS` does not exist, the project automatically ignores the path; create a `static/` directory or adjust settings if static resources are needed.
 
 ## 智能分析占位接口 / Intelligent Analytics Interface
 
-为后续接入自动标签、质控检测、摘要生成、向量检索以及 `.h5ad` 预处理等 AI/ML 能力，后端预留了统一入口 `ml_i且ace`。当前实现仅记录任务，实际算法可在未来替换。
+为后续接入自动标签、质控检测、摘要生成、向量检索以及 `.h5ad` 预处理等 AI/ML 能力，后端预留了统一入口 `ml_interface`。当前实现仅记录任务，实际算法可在未来替换。
+<br>To facilitate future integration of AI/ML capabilities such as auto-tagging, QC, summary generation, vector embedding, and `.h5ad` preprocessing, the backend reserves a unified entry point `ml_interface`. The current implementation only records tasks, and actual algorithms can be replaced in the future.
 
 | 任务类型 Task Type | 用途 Purpose |
 | --- | --- |
-| `autotag` | 自动补全/修正物种、实验类型、文档类型等元数据字段。 |
-| `qc` | 对 FASTQ/BAM/VCF 等做快速质控，异常文件自动挂旗。 |
-| `summary` | 生成实验记录或结果文件的简洁摘要，便于前端展示。 |
-| `embedding` | 计算文本/表格/注释的向量嵌入，支持“找相似”检索。 |
-| `h5ad_vis` | 预计算 `.h5ad` 的 UMAP/TSNE 与标注建议，与 Cellxgene 可视化流程衔接。 |
+| `autotag` | 自动补全/修正物种、实验类型、文档类型等元数据字段。<br>Auto-complete/correct metadata fields like species, experiment type, document type. |
+| `qc` | 对 FASTQ/BAM/VCF 等做快速质控，异常文件自动挂旗。<br>Quick QC for FASTQ/BAM/VCF, automatically flagging abnormal files. |
+| `summary` | 生成实验记录或结果文件的简洁摘要，便于前端展示。<br>Generates concise summaries of experiment records or result files for frontend display. |
+| `embedding` | 计算文本/表格/注释的向量嵌入，支持“找相似”检索。<br>Calculates vector embeddings for text/tables/annotations to support "find similar" search. |
+| `h5ad_vis` | 预计算 `.h5ad` 的 UMAP/TSNE 与标注建议，与 Cellxgene 可视化流程衔接。<br>Pre-calculates UMAP/TSNE and annotation suggestions for `.h5ad`, integrating with Cellxgene visualization workflow. |
 
 ### API 概览 / API Overview
 
@@ -228,49 +266,61 @@ POST /api/ml/trigger/
 → { "task_id": 45, "status": "queued" }
 ```
 
-* 认证：继承全站 Token/Session 机制。  
-* 权限：仅登录用户可创建与查询自身任务，管理员可查看全部。  
-* 数据存储：所有请求写入 `ml_interface.MLTask`，字段包括任务类型、状态（`pending|queued|running|done|failed`）、结果 JSON、提交人及时间。  
+* 认证：继承全站 Token/Session 机制。
+  <br>Authentication: Inherits site-wide Token/Session mechanism.
+* 权限：仅登录用户可创建与查询自身任务，管理员可查看全部。
+  <br>Permissions: Only logged-in users can create and query their own tasks; admins can view all.
+* 数据存储：所有请求写入 `ml_interface.MLTask`，字段包括任务类型、状态（`pending|queued|running|done|failed`）、结果 JSON、提交人及时间。
+  <br>Data Storage: All requests are written to `ml_interface.MLTask`, with fields including task type, status, result JSON, submitter, and time.
 * 扩展：`ml_interface.utils` 提供空实现的 `handle_autotag`、`handle_qc` 等函数，可在接入深度学习服务后直接替换。
+  <br>Extension: `ml_interface.utils` provides empty implementations of `handle_autotag`, `handle_qc`, etc., which can be directly replaced after integrating deep learning services.
 
 该接口确保未来引入 Celery 队列、外部推理服务或 GPU 管线时，仅需在既有占位符基础上扩展逻辑，无需改动前端与现有上传流程。
+<br>This interface ensures that when introducing Celery queues, external inference services, or GPU pipelines in the future, logic only needs to be extended based on existing placeholders without modifying the frontend or existing upload workflows.
 
 ---
 
 ## 性能测试 / Performance Evaluation
 
-**测试设备 / Testbed**：
+**测试设备 / Testbed**:
 
-| 组件 | 参数 |
+| 组件 Component | 参数 Parameter |
 | --- | --- |
 | CPU | 2 × Intel Xeon Gold 6430 (32 cores total, 2.1 GHz) |
 | 内存 RAM | 256 GB DDR5 |
 | 存储 Storage | 4 × 3.84 TB NVMe SSD (RAID10, sustained 5.5 GB/s) |
-| 网络 Network | 10 Gbps 光纤互联 |
+| 网络 Network | 10 Gbps 光纤互联 (Fiber Interconnect) |
 | 操作系统 OS | Ubuntu Server 22.04.4 LTS |
 
-**测试范围 / Scope**：
+**测试范围 / Scope**:
 
-* 单文件上传/下载（10 MB、100 MB、1 GB、10 GB、100 GB）。  
-* 并发上传/下载压力测试（1、10、50、100 客户端）。  
-* 断点续传鲁棒性（30% 丢包、随机断链）。  
-* 基线工具对比：SCP、rsync、原生 HTTP。  
-* 安全评估（认证、权限、审计日志、GDPR/HIPAA 检查）。  
+* 单文件上传/下载（10 MB、100 MB、1 GB、10 GB、100 GB）。
+  <br>Single file upload/download.
+* 并发上传/下载压力测试（1、10、50、100 客户端）。
+  <br>Concurrent upload/download stress test.
+* 断点续传鲁棒性（30% 丢包、随机断链）。
+  <br>Resumable robustness (30% packet loss, random disconnection).
+* 基线工具对比：SCP、rsync、原生 HTTP。
+  <br>Baseline tool comparison: SCP, rsync, native HTTP.
+* 安全评估（认证、权限、审计日志、GDPR/HIPAA 检查）。
+  <br>Security assessment (Auth, Permissions, Audit Logs, GDPR/HIPAA checks).
 * 真实部署模拟（15,000 用户、50 TB 数据量）。
+  <br>Real deployment simulation (15,000 users, 50 TB data volume).
 
-**主要结果 / Key Findings**：
+**主要结果 / Key Findings**:
 
 | 指标 Metric | 结果 Result |
 | --- | --- |
 | 上传吞吐 Upload throughput | 95–125 MB/s |
 | 下载吞吐 Download throughput | 110–155 MB/s |
-| 并发成功率 | > 99%（100 用户） |
-| 100 并发平均响应 | 540–580 ms |
-| 断点恢复时间 | < 3 s |
-| 文件完整性 | 100% |
-| 长时间可用性 | 99.9% |
+| 并发成功率 Concurrent Success Rate | > 99%（100 用户 users） |
+| 100 并发平均响应 100 Concurrent Avg Response | 540–580 ms |
+| 断点恢复时间 Resume Time | < 3 s |
+| 文件完整性 File Integrity | 100% |
+| 长时间可用性 Long-term Availability | 99.9% |
 
 详细测试脚本与数据见 `performance_test_project/`。
+<br>Detailed test scripts and data can be found in `performance_test_project/`.
 
 ---
 
@@ -278,10 +328,10 @@ POST /api/ml/trigger/
 
 | 维度 Dimension | 机制 Mechanism |
 | --- | --- |
-| 数据加密 Data encryption | 对敏感字段采用 AES-256 存储加密，传输层强制 HTTPS/TLS；断点续传使用带签名的临时 URL 防止窃听与篡改。 |
-| 访问审计 Access audit | 登录、文件 CRUD、权限变更等操作实时写入不可变日志；支持基于用户、项目、时间窗口的追溯分析，可接入 ELK/Prometheus。 |
-| 保留与删除 Retention & deletion | 支持按项目设置保留周期；到期数据进入审核队列并执行多遍覆盖删除；提供“软删除 + 永久删除”两阶段策略满足机构合规。 |
-| 合规检查 Compliance | 内置 GDPR/HIPAA 检查项，包括数据主体访问请求、下载记录导出、敏感字段脱敏提示等。 |
+| 数据加密 Data Encryption | 对敏感字段采用 AES-256 存储加密，传输层强制 HTTPS/TLS；断点续传使用带签名的临时 URL 防止窃听与篡改。<br>AES-256 storage encryption for sensitive fields, forced HTTPS/TLS for transport; signed temporary URLs for resumable transfers to prevent eavesdropping and tampering. |
+| 访问审计 Access Audit | 登录、文件 CRUD、权限变更等操作实时写入不可变日志；支持基于用户、项目、时间窗口的追溯分析，可接入 ELK/Prometheus。<br>Real-time immutable logging for login, file CRUD, permission changes; supports traceability analysis based on user, project, time window; ELK/Prometheus compatible. |
+| 保留与删除 Retention & Deletion | 支持按项目设置保留周期；到期数据进入审核队列并执行多遍覆盖删除；提供“软删除 + 永久删除”两阶段策略满足机构合规。<br>Supports retention periods by project; expired data enters audit queue for multi-pass overwrite deletion; provides "soft delete + permanent delete" two-stage strategy for compliance. |
+| 合规检查 Compliance | 内置 GDPR/HIPAA 检查项，包括数据主体访问请求、下载记录导出、敏感字段脱敏提示等。<br>Built-in GDPR/HIPAA checks, including data subject access requests, download record export, sensitive field masking prompts, etc. |
 
 ---
 
@@ -289,18 +339,18 @@ POST /api/ml/trigger/
 
 ```
 Download_system_project/
-├── authentication/                # 用户认证
-├── file_project/                  # Django 配置
-├── file_upload/, file_download/   # 文件业务逻辑
-├── ml_interface/                  # 智能分析任务占位接口
+├── authentication/                # 用户认证 User Authentication
+├── file_project/                  # Django 配置 Django Configuration
+├── file_upload/, file_download/   # 文件业务逻辑 File Business Logic
+├── ml_interface/                  # 智能分析任务占位接口 ML Interface Placeholder
 ├── frontend/                      # Vue 3 SPA
-├── tests/storage_capacity_stress/ # 存储极限压测脚本与报告
-├── cellxgene/                     # Cellxgene 源码与构建
-├── cellxgene_data/                # 已发布的 .h5ad
-├── logs/                          # 运行日志
-├── .pids/                         # 后台进程 PID
-├── performance_test_project/      # 性能测试套件
-├── scripts/                       # 启停脚本
+├── tests/storage_capacity_stress/ # 存储极限压测脚本与报告 Storage Stress Tests
+├── cellxgene/                     # Cellxgene 源码与构建 Source & Build
+├── cellxgene_data/                # 已发布的 .h5ad Published .h5ad
+├── logs/                          # 运行日志 Runtime Logs
+├── .pids/                         # 后台进程 PID Background PIDs
+├── performance_test_project/      # 性能测试套件 Performance Test Suite
+├── scripts/                       # 启停脚本 Start/Stop Scripts
 └── README.md
 ```
 
@@ -310,14 +360,14 @@ Download_system_project/
 
 | 问题 Issue | 原因 Cause | 解决方案 Resolution |
 | --- | --- | --- |
-| Cellxgene 显示 “Not Found” | 未发布 `.h5ad` 或端口占用 | 上传并发送；确认无外部进程占用 `CELLXGENE_PORT` |
-| 遮罩长时间不消失 | 数据文件损坏或嵌入生成失败 | 查看 `logs/cellxgene.log`，验证 `.h5ad` 完整性 |
-| 上传中断 | 网络波动或超出限制 | 使用暂停/恢复功能；检查服务器上传限制 |
-| 下载生成空文件 | 用户取消或网络断链 | 重新下载；系统会清理未完成文件 |
-| npm 依赖冲突 | Node 版本不匹配 | 删除 `frontend/node_modules` 并重新 `npm install` |
-| numpy 版本冲突 | 与 Cellxgene 依赖冲突 | 保持 `.venv` 与 `.venv-cellxgene` 独立 |
+| Cellxgene 显示 “Not Found” | 未发布 `.h5ad` 或端口占用<br>Unpublished `.h5ad` or port occupied | 上传并发送；确认无外部进程占用 `CELLXGENE_PORT`<br>Upload and send; ensure no external process occupies `CELLXGENE_PORT` |
+| 遮罩长时间不消失 Overlay persists | 数据文件损坏或嵌入生成失败<br>Corrupted file or embedding generation failed | 查看 `logs/cellxgene.log`，验证 `.h5ad` 完整性<br>Check `logs/cellxgene.log`, verify `.h5ad` integrity |
+| 上传中断 Upload interrupted | 网络波动或超出限制<br>Network fluctuation or limit exceeded | 使用暂停/恢复功能；检查服务器上传限制<br>Use pause/resume; check server upload limits |
+| 下载生成空文件 Empty download file | 用户取消或网络断链<br>User cancelled or network disconnected | 重新下载；系统会清理未完成文件<br>Redownload; system cleans up incomplete files |
+| npm 依赖冲突 npm dependency conflict | Node 版本不匹配<br>Node version mismatch | 删除 `frontend/node_modules` 并重新 `npm install`<br>Delete `frontend/node_modules` and re-run `npm install` |
+| numpy 版本冲突 numpy version conflict | 与 Cellxgene 依赖冲突<br>Conflict with Cellxgene dependencies | 保持 `.venv` 与 `.venv-cellxgene` 独立<br>Keep `.venv` and `.venv-cellxgene` independent |
 
 ---
 
-本项目遵循 MIT License 开源协议，欢迎社区贡献与反馈。  
-Released under the MIT License—contributions and discussions are welcome.
+本项目遵循 MIT License 开源协议，欢迎社区贡献与反馈。
+<br>Released under the MIT License—contributions and discussions are welcome.
