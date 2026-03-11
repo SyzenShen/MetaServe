@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+from urllib.parse import urlparse
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -96,6 +97,19 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    u = urlparse(DATABASE_URL)
+    if u.scheme in ('postgres', 'postgresql'):
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': (u.path or '').lstrip('/') or 'postgres',
+            'USER': u.username or '',
+            'PASSWORD': u.password or '',
+            'HOST': u.hostname or 'localhost',
+            'PORT': str(u.port or 5432),
+        }
 
 
 # Password validation

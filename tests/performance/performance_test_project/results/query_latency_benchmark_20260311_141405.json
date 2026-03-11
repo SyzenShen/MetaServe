@@ -1,0 +1,104 @@
+{
+  "rows": [
+    {
+      "dataset_size": "small",
+      "filters_count": 1,
+      "filters": "{\"document_type\": \"Dataset\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 11.75,
+      "latency_p50_ms": 11.88,
+      "latency_p95_ms": 12.3,
+      "timestamp": "2026-03-11T14:14:04.431911"
+    },
+    {
+      "dataset_size": "small",
+      "filters_count": 3,
+      "filters": "{\"document_type\": \"Dataset\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 11.32,
+      "latency_p50_ms": 11.2,
+      "latency_p95_ms": 11.96,
+      "timestamp": "2026-03-11T14:14:04.511497"
+    },
+    {
+      "dataset_size": "small",
+      "filters_count": 5,
+      "filters": "{\"document_type\": \"Dataset\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 11.98,
+      "latency_p50_ms": 12.15,
+      "latency_p95_ms": 12.74,
+      "timestamp": "2026-03-11T14:14:04.595640"
+    },
+    {
+      "dataset_size": "medium",
+      "filters_count": 1,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 12.66,
+      "latency_p50_ms": 12.58,
+      "latency_p95_ms": 14.51,
+      "timestamp": "2026-03-11T14:14:04.684543"
+    },
+    {
+      "dataset_size": "medium",
+      "filters_count": 3,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 12.03,
+      "latency_p50_ms": 11.78,
+      "latency_p95_ms": 12.87,
+      "timestamp": "2026-03-11T14:14:04.769032"
+    },
+    {
+      "dataset_size": "medium",
+      "filters_count": 5,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 11.75,
+      "latency_p50_ms": 11.65,
+      "latency_p95_ms": 13.41,
+      "timestamp": "2026-03-11T14:14:04.851556"
+    },
+    {
+      "dataset_size": "large",
+      "filters_count": 1,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 12.76,
+      "latency_p50_ms": 12.38,
+      "latency_p95_ms": 14.96,
+      "timestamp": "2026-03-11T14:14:04.941137"
+    },
+    {
+      "dataset_size": "large",
+      "filters_count": 3,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 12.96,
+      "latency_p50_ms": 12.85,
+      "latency_p95_ms": 13.95,
+      "timestamp": "2026-03-11T14:14:05.032114"
+    },
+    {
+      "dataset_size": "large",
+      "filters_count": 5,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 13.52,
+      "latency_p50_ms": 13.28,
+      "latency_p95_ms": 14.58,
+      "timestamp": "2026-03-11T14:14:05.127085"
+    }
+  ],
+  "csv": "/Users/shenyz/projects/github/Download_system_project/tests/performance/performance_test_project/results/query_latency_benchmark_20260311_141405.csv"
+}

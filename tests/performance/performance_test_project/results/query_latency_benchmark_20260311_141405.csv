@@ -1,0 +1,10 @@
+dataset_size,filters_count,filters,iterations,success_rate,latency_avg_ms,latency_p50_ms,latency_p95_ms,timestamp
+small,1,"{""document_type"": ""Dataset""}",7,1.0,11.75,11.88,12.3,2026-03-11T14:14:04.431911
+small,3,"{""document_type"": ""Dataset""}",7,1.0,11.32,11.2,11.96,2026-03-11T14:14:04.511497
+small,5,"{""document_type"": ""Dataset""}",7,1.0,11.98,12.15,12.74,2026-03-11T14:14:04.595640
+medium,1,"{""document_type"": ""Dataset"", ""access_level"": ""Internal""}",7,1.0,12.66,12.58,14.51,2026-03-11T14:14:04.684543
+medium,3,"{""document_type"": ""Dataset"", ""access_level"": ""Internal""}",7,1.0,12.03,11.78,12.87,2026-03-11T14:14:04.769032
+medium,5,"{""document_type"": ""Dataset"", ""access_level"": ""Internal""}",7,1.0,11.75,11.65,13.41,2026-03-11T14:14:04.851556
+large,1,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq""}",7,1.0,12.76,12.38,14.96,2026-03-11T14:14:04.941137
+large,3,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq""}",7,1.0,12.96,12.85,13.95,2026-03-11T14:14:05.032114
+large,5,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq""}",7,1.0,13.52,13.28,14.58,2026-03-11T14:14:05.127085

@@ -74,7 +74,7 @@ class AuthManager:
                 json={
                     "email": email,
                     "password": password,
-                    "password_confirm": password
+                    "confirm_password": password
                 },
                 timeout=30
             )

@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-03-11T06:12:19.080649",
+  "os": "Darwin 24.6.0",
+  "cpu": "i386",
+  "ram_gb": 32.0,
+  "docker_version": "Docker version 28.5.1, build e180ab8",
+  "docker_compose_version": "Docker Compose version v2.40.2-desktop.1",
+  "db_backend": "sqlite",
+  "db_version": "3.40.1",
+  "media_root": "/Users/shenyz/projects/github/Download_system_project/media",
+  "media_total_bytes": 499963174912,
+  "media_used_bytes": 326370643968,
+  "media_free_bytes": 173592530944,
+  "user_count": 47,
+  "file_count": 42,
+  "total_file_bytes": 6217226575,
+  "single_node": "unknown",
+  "shared_storage_with_viewer": "unknown",
+  "query_log_timeframe": "unknown"
+}

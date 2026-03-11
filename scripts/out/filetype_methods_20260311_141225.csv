@@ -1,0 +1,8 @@
+file_type,method
+CSV,content-assisted
+FASTA,content-assisted
+FASTQ,content-assisted
+PDF,content-assisted
+VCF,content-assisted
+txt,content-assisted
+other,extension-based
