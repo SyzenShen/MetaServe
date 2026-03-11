@@ -1,0 +1,7 @@
+db_backend,task,dataset_label,filters_count,filters,completion_time_ms,query_latency_ms,manifest_generation_ms,result_items,lines,status,http_status,timestamp,user_actions
+sqlite,search,baseline_none,1,{},11.82,11.82,,0,,success,200,2026-03-11T21:30:15.797905,1
+sqlite,manifest,baseline_none,1,{},5.32,,5.32,,0,success,200,2026-03-11T21:30:15.803294,1
+sqlite,search,doc_dataset,1,"{""document_type"": ""Dataset""}",12.04,12.04,,0,,success,200,2026-03-11T21:30:15.815410,1
+sqlite,manifest,doc_dataset,1,"{""document_type"": ""Dataset""}",5.56,,5.56,,0,success,200,2026-03-11T21:30:15.821011,1
+sqlite,search,doc_dataset_internal_rna,3,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq""}",13.19,13.19,,0,,success,200,2026-03-11T21:30:15.834272,3
+sqlite,manifest,doc_dataset_internal_rna,3,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq""}",6.85,,6.85,,0,success,200,2026-03-11T21:30:15.841165,3

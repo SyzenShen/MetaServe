@@ -1,0 +1,89 @@
+{
+  "rows": [
+    {
+      "db_backend": "sqlite",
+      "task": "search",
+      "dataset_label": "baseline_none",
+      "filters_count": 1,
+      "filters": "{}",
+      "completion_time_ms": 11.0,
+      "query_latency_ms": 11.0,
+      "result_items": 0,
+      "status": "success",
+      "http_status": 200,
+      "timestamp": "2026-03-11T17:34:43.273122",
+      "user_actions": 1
+    },
+    {
+      "db_backend": "sqlite",
+      "task": "manifest",
+      "dataset_label": "baseline_none",
+      "filters_count": 1,
+      "filters": "{}",
+      "completion_time_ms": 6.59,
+      "manifest_generation_ms": 6.59,
+      "lines": 0,
+      "status": "success",
+      "http_status": 200,
+      "timestamp": "2026-03-11T17:34:43.279757",
+      "user_actions": 1
+    },
+    {
+      "db_backend": "sqlite",
+      "task": "search",
+      "dataset_label": "doc_dataset",
+      "filters_count": 1,
+      "filters": "{\"document_type\": \"Dataset\"}",
+      "completion_time_ms": 13.73,
+      "query_latency_ms": 13.73,
+      "result_items": 0,
+      "status": "success",
+      "http_status": 200,
+      "timestamp": "2026-03-11T17:34:43.293561",
+      "user_actions": 1
+    },
+    {
+      "db_backend": "sqlite",
+      "task": "manifest",
+      "dataset_label": "doc_dataset",
+      "filters_count": 1,
+      "filters": "{\"document_type\": \"Dataset\"}",
+      "completion_time_ms": 5.68,
+      "manifest_generation_ms": 5.68,
+      "lines": 0,
+      "status": "success",
+      "http_status": 200,
+      "timestamp": "2026-03-11T17:34:43.299292",
+      "user_actions": 1
+    },
+    {
+      "db_backend": "sqlite",
+      "task": "search",
+      "dataset_label": "doc_dataset_internal_rna",
+      "filters_count": 3,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\"}",
+      "completion_time_ms": 11.97,
+      "query_latency_ms": 11.97,
+      "result_items": 0,
+      "status": "success",
+      "http_status": 200,
+      "timestamp": "2026-03-11T17:34:43.311397",
+      "user_actions": 3
+    },
+    {
+      "db_backend": "sqlite",
+      "task": "manifest",
+      "dataset_label": "doc_dataset_internal_rna",
+      "filters_count": 3,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\"}",
+      "completion_time_ms": 6.32,
+      "manifest_generation_ms": 6.32,
+      "lines": 0,
+      "status": "success",
+      "http_status": 200,
+      "timestamp": "2026-03-11T17:34:43.317768",
+      "user_actions": 3
+    }
+  ],
+  "csv": "/Users/shenyz/projects/github/Download_system_project/tests/performance/performance_test_project/results/galaxy_benchmark_mvp_20260311_173443.csv"
+}

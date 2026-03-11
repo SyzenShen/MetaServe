@@ -1,0 +1,23 @@
+{
+  "rows": [
+    {
+      "system": "galaxy",
+      "task": "wait_ready",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 12.88,
+      "detail": "{\"base_url\": \"http://localhost:8080\"}",
+      "timestamp": "2026-03-11T17:55:06.050750"
+    },
+    {
+      "system": "galaxy",
+      "task": "create_history",
+      "status": "fail",
+      "http_status": 500,
+      "completion_time_ms": 27.94,
+      "detail": "{\"history_id\": null, \"name\": \"bench_history_20260311_175506\"}",
+      "timestamp": "2026-03-11T17:55:06.078750"
+    }
+  ],
+  "csv": "/Users/shenyz/projects/github/Download_system_project/tests/performance/performance_test_project/results/galaxy_api_benchmark_20260311_175506.csv"
+}

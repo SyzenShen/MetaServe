@@ -1,0 +1,9 @@
+system,task,status,http_status,completion_time_ms,detail,timestamp
+galaxy,wait_ready,success,200,17.01,"{""base_url"": ""http://localhost:8080""}",2026-03-11T21:29:17.685459
+galaxy,ensure_user_api_key,success,200,84.8,"{""mode"": ""provisioned"", ""user_id"": ""f597429621d6eb2b""}",2026-03-11T21:29:17.778310
+galaxy,create_history,success,200,74.72,"{""history_id"": ""1cd8e2f6b131e891"", ""name"": ""bench_history_20260311_212917""}",2026-03-11T21:29:17.853138
+galaxy,upload_text_dataset,success,200,255.18,"{""dataset_id"": ""f2db41e1fa331b3e""}",2026-03-11T21:29:18.108432
+galaxy,wait_dataset_ok,success,200,6672.8,"{""dataset_id"": ""f2db41e1fa331b3e"", ""state"": ""ok""}",2026-03-11T21:29:24.781298
+galaxy,list_history_contents,success,200,34.52,"{""history_id"": ""1cd8e2f6b131e891"", ""items"": 1}",2026-03-11T21:29:24.815917
+galaxy,export_history_ready,success,200,8323.1,"{""history_id"": ""1cd8e2f6b131e891"", ""download_url"": ""/api/histories/1cd8e2f6b131e891/exports/f2db41e1fa331b3e""}",2026-03-11T21:29:33.139092
+galaxy,download_export,success,200,19.3,"{""path"": ""/Users/shenyz/projects/github/Download_system_project/tests/performance/performance_test_project/results/galaxy_history_export_20260311_212917.tgz"", ""bytes"": 1327}",2026-03-11T21:29:33.158476

@@ -63,6 +63,7 @@ def main():
     email = ensure_login(auth)
     headers = get_headers(auth, email)
     session = requests.Session()
+    db_backend = os.environ.get("BENCH_DB_BACKEND", "sqlite")
 
     tasks = []
     default_filters = [
@@ -78,6 +79,7 @@ def main():
         ok_s, q_ms, result_cnt, code_s = run_search(session, headers, params)
         steps = max(1, len([k for k, v in params.items() if k in ("document_type", "access_level", "experiment_type", "organism", "project") and v]))
         tasks.append({
+            "db_backend": db_backend,
             "task": "search",
             "dataset_label": label,
             "filters_count": steps,
@@ -92,6 +94,7 @@ def main():
         })
         ok_m, m_ms, line_cnt, code_m = run_manifest(session, headers, spec["params"])
         tasks.append({
+            "db_backend": db_backend,
             "task": "manifest",
             "dataset_label": label,
             "filters_count": steps,
@@ -107,6 +110,7 @@ def main():
 
     csv_path = os.path.join(RESULTS_DIR, f"galaxy_benchmark_mvp_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
     fieldnames = [
+        "db_backend",
         "task",
         "dataset_label",
         "filters_count",
@@ -133,4 +137,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

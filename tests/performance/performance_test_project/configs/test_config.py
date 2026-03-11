@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 
 # 基础配置
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.environ.get("BENCH_BASE_URL", "http://localhost:8000")
 API_BASE_URL = f"{BASE_URL}/api"
 FRONTEND_URL = "http://localhost:5173"
 

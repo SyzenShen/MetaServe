@@ -1,0 +1,10 @@
+db_backend,dataset_size,filters_count,filters,iterations,success_rate,latency_avg_ms,latency_p50_ms,latency_p95_ms,timestamp
+sqlite,small,1,"{""document_type"": ""Dataset"", ""page_size"": ""50""}",7,1.0,15.4,14.08,20.91,2026-03-11T16:56:34.653355
+sqlite,small,3,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq"", ""page_size"": ""50""}",7,1.0,14.78,12.79,19.85,2026-03-11T16:56:34.757315
+sqlite,small,5,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq"", ""organism"": ""Homo sapiens"", ""project"": ""ProjectA"", ""page_size"": ""50""}",7,1.0,14.75,14.71,19.07,2026-03-11T16:56:34.860968
+sqlite,medium,1,"{""document_type"": ""Dataset"", ""page_size"": ""50""}",7,1.0,14.4,12.78,19.29,2026-03-11T16:56:34.962168
+sqlite,medium,3,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq"", ""page_size"": ""50""}",7,1.0,15.47,14.59,17.75,2026-03-11T16:56:35.070769
+sqlite,medium,5,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq"", ""organism"": ""Homo sapiens"", ""project"": ""ProjectA"", ""page_size"": ""50""}",7,1.0,19.74,19.0,30.64,2026-03-11T16:56:35.209256
+sqlite,large,1,"{""document_type"": ""Dataset"", ""page_size"": ""50""}",7,1.0,15.56,15.85,18.4,2026-03-11T16:56:35.318535
+sqlite,large,3,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq"", ""page_size"": ""50""}",7,1.0,15.39,12.64,20.23,2026-03-11T16:56:35.426579
+sqlite,large,5,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq"", ""organism"": ""Homo sapiens"", ""project"": ""ProjectA"", ""page_size"": ""50""}",7,1.0,16.31,15.14,22.3,2026-03-11T16:56:35.541081

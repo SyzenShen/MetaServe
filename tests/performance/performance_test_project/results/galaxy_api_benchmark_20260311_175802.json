@@ -1,0 +1,23 @@
+{
+  "rows": [
+    {
+      "system": "galaxy",
+      "task": "wait_ready",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 18.83,
+      "detail": "{\"base_url\": \"http://localhost:8080\"}",
+      "timestamp": "2026-03-11T17:58:02.699324"
+    },
+    {
+      "system": "galaxy",
+      "task": "ensure_user_api_key",
+      "status": "fail",
+      "http_status": 500,
+      "completion_time_ms": 29.39,
+      "detail": "{\"mode\": \"cannot_resolve_user\", \"create_status\": 400, \"create_body\": \"{\\\"err_msg\\\": \\\"\\\\n\\\\nPublic name is taken; please choose another.\\\", \\\"err_code\\\": 400008}\", \"list_status\": 200, \"list_params\": {\"f_email\": \"admin@example.com\"}}",
+      "timestamp": "2026-03-11T17:58:02.728915"
+    }
+  ],
+  "csv": "/Users/shenyz/projects/github/Download_system_project/tests/performance/performance_test_project/results/galaxy_api_benchmark_20260311_175802.csv"
+}

@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  galaxy:
+    image: bgruening/galaxy-stable
+    container_name: performance_bench_galaxy
+    ports:
+      - "${GALAXY_PORT:-8080}:80"
+    environment:
+      - GALAXY_CONFIG_MASTER_API_KEY=${GALAXY_MASTER_API_KEY:-bench-galaxy-key}
+      - GALAXY_CONFIG_ADMIN_USERS=${GALAXY_ADMIN_USERS:-admin@example.com}
+    volumes:
+      - galaxy_database:/galaxy/database
+    restart: unless-stopped
+
+volumes:
+  galaxy_database:

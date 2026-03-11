@@ -1,0 +1,7 @@
+db_backend,task,dataset_label,filters_count,filters,completion_time_ms,query_latency_ms,manifest_generation_ms,result_items,lines,status,http_status,timestamp,user_actions
+postgres,search,baseline_none,1,{},30.86,30.86,,0,,success,200,2026-03-11T17:03:20.376519,1
+postgres,manifest,baseline_none,1,{},24.36,,24.36,,0,success,200,2026-03-11T17:03:20.400920,1
+postgres,search,doc_dataset,1,"{""document_type"": ""Dataset""}",34.44,34.44,,0,,success,200,2026-03-11T17:03:20.435437,1
+postgres,manifest,doc_dataset,1,"{""document_type"": ""Dataset""}",27.97,,27.97,,0,success,200,2026-03-11T17:03:20.463450,1
+postgres,search,doc_dataset_internal_rna,3,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq""}",43.47,43.47,,0,,success,200,2026-03-11T17:03:20.506999,3
+postgres,manifest,doc_dataset_internal_rna,3,"{""document_type"": ""Dataset"", ""access_level"": ""Internal"", ""experiment_type"": ""RNA-seq""}",33.74,,33.74,,0,success,200,2026-03-11T17:03:20.540825,3

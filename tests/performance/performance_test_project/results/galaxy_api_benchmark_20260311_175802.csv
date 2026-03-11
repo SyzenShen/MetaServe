@@ -1,0 +1,3 @@
+system,task,status,http_status,completion_time_ms,detail,timestamp
+galaxy,wait_ready,success,200,18.83,"{""base_url"": ""http://localhost:8080""}",2026-03-11T17:58:02.699324
+galaxy,ensure_user_api_key,fail,500,29.39,"{""mode"": ""cannot_resolve_user"", ""create_status"": 400, ""create_body"": ""{\""err_msg\"": \""\\n\\nPublic name is taken; please choose another.\"", \""err_code\"": 400008}"", ""list_status"": 200, ""list_params"": {""f_email"": ""admin@example.com""}}",2026-03-11T17:58:02.728915

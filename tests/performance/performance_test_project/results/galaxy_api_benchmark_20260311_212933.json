@@ -1,0 +1,77 @@
+{
+  "rows": [
+    {
+      "system": "galaxy",
+      "task": "wait_ready",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 17.01,
+      "detail": "{\"base_url\": \"http://localhost:8080\"}",
+      "timestamp": "2026-03-11T21:29:17.685459"
+    },
+    {
+      "system": "galaxy",
+      "task": "ensure_user_api_key",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 84.8,
+      "detail": "{\"mode\": \"provisioned\", \"user_id\": \"f597429621d6eb2b\"}",
+      "timestamp": "2026-03-11T21:29:17.778310"
+    },
+    {
+      "system": "galaxy",
+      "task": "create_history",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 74.72,
+      "detail": "{\"history_id\": \"1cd8e2f6b131e891\", \"name\": \"bench_history_20260311_212917\"}",
+      "timestamp": "2026-03-11T21:29:17.853138"
+    },
+    {
+      "system": "galaxy",
+      "task": "upload_text_dataset",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 255.18,
+      "detail": "{\"dataset_id\": \"f2db41e1fa331b3e\"}",
+      "timestamp": "2026-03-11T21:29:18.108432"
+    },
+    {
+      "system": "galaxy",
+      "task": "wait_dataset_ok",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 6672.8,
+      "detail": "{\"dataset_id\": \"f2db41e1fa331b3e\", \"state\": \"ok\"}",
+      "timestamp": "2026-03-11T21:29:24.781298"
+    },
+    {
+      "system": "galaxy",
+      "task": "list_history_contents",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 34.52,
+      "detail": "{\"history_id\": \"1cd8e2f6b131e891\", \"items\": 1}",
+      "timestamp": "2026-03-11T21:29:24.815917"
+    },
+    {
+      "system": "galaxy",
+      "task": "export_history_ready",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 8323.1,
+      "detail": "{\"history_id\": \"1cd8e2f6b131e891\", \"download_url\": \"/api/histories/1cd8e2f6b131e891/exports/f2db41e1fa331b3e\"}",
+      "timestamp": "2026-03-11T21:29:33.139092"
+    },
+    {
+      "system": "galaxy",
+      "task": "download_export",
+      "status": "success",
+      "http_status": 200,
+      "completion_time_ms": 19.3,
+      "detail": "{\"path\": \"/Users/shenyz/projects/github/Download_system_project/tests/performance/performance_test_project/results/galaxy_history_export_20260311_212917.tgz\", \"bytes\": 1327}",
+      "timestamp": "2026-03-11T21:29:33.158476"
+    }
+  ],
+  "csv": "/Users/shenyz/projects/github/Download_system_project/tests/performance/performance_test_project/results/galaxy_api_benchmark_20260311_212917.csv"
+}

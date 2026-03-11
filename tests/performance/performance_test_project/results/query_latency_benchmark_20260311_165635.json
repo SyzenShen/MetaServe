@@ -1,0 +1,113 @@
+{
+  "rows": [
+    {
+      "db_backend": "sqlite",
+      "dataset_size": "small",
+      "filters_count": 1,
+      "filters": "{\"document_type\": \"Dataset\", \"page_size\": \"50\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 15.4,
+      "latency_p50_ms": 14.08,
+      "latency_p95_ms": 20.91,
+      "timestamp": "2026-03-11T16:56:34.653355"
+    },
+    {
+      "db_backend": "sqlite",
+      "dataset_size": "small",
+      "filters_count": 3,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\", \"page_size\": \"50\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 14.78,
+      "latency_p50_ms": 12.79,
+      "latency_p95_ms": 19.85,
+      "timestamp": "2026-03-11T16:56:34.757315"
+    },
+    {
+      "db_backend": "sqlite",
+      "dataset_size": "small",
+      "filters_count": 5,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\", \"organism\": \"Homo sapiens\", \"project\": \"ProjectA\", \"page_size\": \"50\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 14.75,
+      "latency_p50_ms": 14.71,
+      "latency_p95_ms": 19.07,
+      "timestamp": "2026-03-11T16:56:34.860968"
+    },
+    {
+      "db_backend": "sqlite",
+      "dataset_size": "medium",
+      "filters_count": 1,
+      "filters": "{\"document_type\": \"Dataset\", \"page_size\": \"50\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 14.4,
+      "latency_p50_ms": 12.78,
+      "latency_p95_ms": 19.29,
+      "timestamp": "2026-03-11T16:56:34.962168"
+    },
+    {
+      "db_backend": "sqlite",
+      "dataset_size": "medium",
+      "filters_count": 3,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\", \"page_size\": \"50\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 15.47,
+      "latency_p50_ms": 14.59,
+      "latency_p95_ms": 17.75,
+      "timestamp": "2026-03-11T16:56:35.070769"
+    },
+    {
+      "db_backend": "sqlite",
+      "dataset_size": "medium",
+      "filters_count": 5,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\", \"organism\": \"Homo sapiens\", \"project\": \"ProjectA\", \"page_size\": \"50\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 19.74,
+      "latency_p50_ms": 19.0,
+      "latency_p95_ms": 30.64,
+      "timestamp": "2026-03-11T16:56:35.209256"
+    },
+    {
+      "db_backend": "sqlite",
+      "dataset_size": "large",
+      "filters_count": 1,
+      "filters": "{\"document_type\": \"Dataset\", \"page_size\": \"50\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 15.56,
+      "latency_p50_ms": 15.85,
+      "latency_p95_ms": 18.4,
+      "timestamp": "2026-03-11T16:56:35.318535"
+    },
+    {
+      "db_backend": "sqlite",
+      "dataset_size": "large",
+      "filters_count": 3,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\", \"page_size\": \"50\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 15.39,
+      "latency_p50_ms": 12.64,
+      "latency_p95_ms": 20.23,
+      "timestamp": "2026-03-11T16:56:35.426579"
+    },
+    {
+      "db_backend": "sqlite",
+      "dataset_size": "large",
+      "filters_count": 5,
+      "filters": "{\"document_type\": \"Dataset\", \"access_level\": \"Internal\", \"experiment_type\": \"RNA-seq\", \"organism\": \"Homo sapiens\", \"project\": \"ProjectA\", \"page_size\": \"50\"}",
+      "iterations": 7,
+      "success_rate": 1.0,
+      "latency_avg_ms": 16.31,
+      "latency_p50_ms": 15.14,
+      "latency_p95_ms": 22.3,
+      "timestamp": "2026-03-11T16:56:35.541081"
+    }
+  ],
+  "csv": "/Users/shenyz/projects/github/Download_system_project/tests/performance/performance_test_project/results/query_latency_benchmark_20260311_165635.csv"
+}

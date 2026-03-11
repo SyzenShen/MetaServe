@@ -1,0 +1,15 @@
+system,task,completion_time_ms,source_csv
+metaserve,search:baseline_none,11.82,galaxy_benchmark_mvp_20260311_213015.csv
+metaserve,manifest:baseline_none,5.32,galaxy_benchmark_mvp_20260311_213015.csv
+metaserve,search:doc_dataset,12.04,galaxy_benchmark_mvp_20260311_213015.csv
+metaserve,manifest:doc_dataset,5.56,galaxy_benchmark_mvp_20260311_213015.csv
+metaserve,search:doc_dataset_internal_rna,13.19,galaxy_benchmark_mvp_20260311_213015.csv
+metaserve,manifest:doc_dataset_internal_rna,6.85,galaxy_benchmark_mvp_20260311_213015.csv
+galaxy,wait_ready,15.09,galaxy_api_benchmark_20260311_213016.csv
+galaxy,ensure_user_api_key,68.33,galaxy_api_benchmark_20260311_213016.csv
+galaxy,create_history,45.87,galaxy_api_benchmark_20260311_213016.csv
+galaxy,upload_text_dataset,228.71,galaxy_api_benchmark_20260311_213016.csv
+galaxy,wait_dataset_ok,6474.72,galaxy_api_benchmark_20260311_213016.csv
+galaxy,list_history_contents,30.31,galaxy_api_benchmark_20260311_213016.csv
+galaxy,export_history_ready,8332.04,galaxy_api_benchmark_20260311_213016.csv
+galaxy,download_export,19.26,galaxy_api_benchmark_20260311_213016.csv

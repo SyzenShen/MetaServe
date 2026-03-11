@@ -1,0 +1,9 @@
+system,task,completion_time_ms,source_csv
+metaserve,search:baseline_none,11.0,galaxy_benchmark_mvp_20260311_173443.csv
+metaserve,manifest:baseline_none,6.59,galaxy_benchmark_mvp_20260311_173443.csv
+metaserve,search:doc_dataset,13.73,galaxy_benchmark_mvp_20260311_173443.csv
+metaserve,manifest:doc_dataset,5.68,galaxy_benchmark_mvp_20260311_173443.csv
+metaserve,search:doc_dataset_internal_rna,11.97,galaxy_benchmark_mvp_20260311_173443.csv
+metaserve,manifest:doc_dataset_internal_rna,6.32,galaxy_benchmark_mvp_20260311_173443.csv
+galaxy,wait_ready,17.14,galaxy_api_benchmark_20260311_173443.csv
+galaxy,create_history,28.8,galaxy_api_benchmark_20260311_173443.csv

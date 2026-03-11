@@ -82,6 +82,9 @@ class AuthManager:
             if response.status_code == 201:
                 self.logger.info(f"用户注册成功: {email}")
                 return True
+            if response.status_code == 400:
+                self.logger.warning(f"用户可能已存在，跳过注册: {email}")
+                return True
             else:
                 self.logger.warning(f"用户注册失败: {email}, 状态码: {response.status_code}")
                 return False
