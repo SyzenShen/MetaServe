@@ -1,0 +1,27 @@
+Scope
+- MetaServe benchmark covers:
+  - Metadata discovery: /api/files/search/
+  - Manifest generation: /api/files/manifest/
+- Galaxy benchmark covers:
+  - History operations via Galaxy REST API (create history, upload dataset, list contents, export history, download export)
+
+Data set
+- MetaServe: existing records in the local Django database used by the running instance at measurement time.
+- Galaxy: a synthetic text dataset uploaded during each run (upload_text_dataset), then history export to tgz.
+
+Repetitions and aggregation
+- MetaServe discovery/manifest metrics in Table 3 are aggregated across all successful rows in results/galaxy_benchmark_mvp_*.csv (N=18 per task).
+- Galaxy metrics in Table 3 are aggregated across successful runs that include the corresponding tasks (N=2 for list_history_contents/export_history_ready/download_export).
+- Metrics are computed as:
+  - median_time_s: median of per-request completion_time_ms (converted to seconds)
+  - p95_time_s: 95th percentile of per-request completion_time_ms (converted to seconds)
+
+MetaServe vs Galaxy data subset alignment
+- Not the same data subset:
+  - MetaServe tasks operate on MetaServe’s stored metadata and file index.
+  - Galaxy tasks operate on an uploaded synthetic dataset and history export flow.
+- Table 3 notes flag where Galaxy metrics are proxy mappings rather than 1:1 task equivalence.
+
+Shared storage assumptions
+- MetaServe viewer handoff (Cellxgene) prefers zero-copy via symlink to CELLXGENE_DATA_DIR; if symlink fails it falls back to a file copy.
+- Galaxy export requires server-side packaging into an archive (tgz) before download, which implies additional server-side data copying/compression work.
